@@ -48,5 +48,7 @@ export enum RoutesAlias {
   NestedMenu321 = '/system/nested/menu3/menu3-2', // 嵌套菜单3-2-1
   Server = '/safeguard/server', // 服务器
   ChangeLog = '/change/log', // 更新日志
-  ExamplesTabs = '/examples/tabs' // 标签页
+  ExamplesTabs = '/examples/tabs', // 标签页
+
+  Product = '/device/product'
 }

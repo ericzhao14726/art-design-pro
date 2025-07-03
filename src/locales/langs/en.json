@@ -293,6 +293,10 @@
     "help": {
       "title": "Help Center",
       "document": "Document"
+    },
+    "device": {
+      "title": "Device Manager",
+      "product": "Product"
     }
   },
   "table": {

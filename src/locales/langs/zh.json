@@ -285,6 +285,10 @@
     "help": {
       "title": "帮助中心",
       "document": "官方文档"
+    },
+    "device": {
+      "title": "设备管理",
+      "product": "产品"
     }
   },
   "table": {
