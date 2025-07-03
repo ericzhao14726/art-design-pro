@@ -307,6 +307,10 @@
       "title": "Help Center",
       "document": "Document",
       "liteVersion": "Lite Version"
+    },
+    "device": {
+      "title": "Device Manager",
+      "product": "Product"
     }
   },
   "table": {
