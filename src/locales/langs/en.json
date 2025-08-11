@@ -310,7 +310,13 @@
     },
     "device": {
       "title": "Device Manager",
-      "product": "Product"
+      "product": "Product",
+      "device": "Device",
+      "deviceDetail": "Device Detail"
+    },
+    "dataService": {
+      "title": "Data Service",
+      "funcModel": "Function Model"
     }
   },
   "table": {

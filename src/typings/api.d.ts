@@ -31,6 +31,28 @@ declare namespace Api {
 
     /** 启用状态 */
     type EnableStatus = '1' | '2'
+
+    interface PageByNoRequest {
+      pageNo: number
+      perPage: number
+    }
+
+    interface PageByNoResult {
+      currentPageNo: number
+      totalCount: number
+      totalPage: number
+      isEnd: boolean
+    }
+
+    interface PageByCursorRequest {
+      cursor: string
+      count: number
+    }
+
+    interface PageByCursorResult {
+      cursor: string
+      total: number
+    }
   }
 
   /** 认证类型 */
@@ -104,5 +126,193 @@ declare namespace Api {
       Pick<RoleListItem, 'roleId' | 'roleName' | 'roleCode' | 'description' | 'enabled'> &
         Api.Common.CommonSearchParams
     >
+  }
+  /** 设备管理 */
+  namespace Device {
+    interface Product {
+      productId: string
+      name: string
+      description: string
+      enable: boolean
+      createdAt: number
+      updatedAt: number
+      creator: string
+      editor: string
+      funcModels: string[]
+    }
+
+    interface ProductListData {
+      products: Product[]
+      pageResult: PageByNoResult
+    }
+    interface CreateProductRequest {
+      name: string
+      description: string
+    }
+    interface CreateProductResponse {
+      productId: string
+    }
+    interface GetProductsResponse {
+      products: Product[]
+      pageResult: Common.PageByNoResult
+    }
+    interface GetProductsRequest extends Common.PageByNoRequest {
+      name: string
+    }
+    interface UpdateProductRequest {
+      productId: string
+      name: string
+      description: string
+    }
+    interface UpdateProductStatusRequest {
+      productId: string
+      toEnable: boolean
+    }
+    interface Device {
+      deviceId: string
+      productId: string
+      productName: string
+      name: string
+      description: string
+      enable: boolean
+      isOnline: boolean
+      createdAt: number
+      updatedAt: number
+      creator: string
+      editor: string
+    }
+
+    interface CreateDeviceRequest {
+      productId: string
+      name: string
+      description: string
+    }
+
+    interface CreateDeviceResponse {
+      deviceId: string
+    }
+
+    interface GetDevicesResponse {
+      devices: Device[]
+      pageResult: Common.PageByNoResult
+    }
+
+    interface GetDevicesRequest extends Common.PageByNoRequest {
+      productId: string
+      name: string
+    }
+
+    interface UpdateDeviceRequest {
+      deviceId: string
+      name: string
+      description: string
+    }
+
+    interface UpdateDeviceStatusRequest {
+      deviceId: string
+      toEnable: boolean
+    }
+
+    interface GetMonitorDataRequest extends Common.PageByCursorRequest {
+      deviceId: string
+      productId: string
+      name: string
+      queryBaseTime: number
+      beforeSecond: number
+    }
+
+    interface GetMonitorDataResponse {
+      metricData: MetricResults
+      pageResult: Common.PageByCursorResult
+    }
+
+    interface MetricResults {
+      name: string
+      labels: Map<string, string>
+      values: MetricValue[]
+    }
+
+    interface MetricValue {
+      t: number
+      v: number
+    }
+  }
+
+  namespace DataService {
+    interface FuncModel extends FuncModelDataType {
+      funcModelId: string
+      type: string
+      input: FuncModelDataType[]
+      output: FuncModelDataType[]
+      propertyType: string // 属性类型
+      eventType: string // 事件类型
+      serviceType: string // 服务类型
+      description: string // 描述
+      createdAt: number
+      updatedAt: number
+      creator: string
+      editor: string
+    }
+
+    interface FuncModelDataType {
+      name: string // 功能名称
+      key: string // 功能唯一Key 产品下唯一
+      dataType: string // 数据类型
+      spec: DataSpec // 数据规格
+    }
+    interface DataSpec {
+      max: number // Max 最大值 仅在DataTypeNumber下有效
+      min: number // Min 最小值 仅在DataTypeNumber下有效
+      step: number // Step 步长 仅在DataTypeNumber下有效
+      unit: string // Unit 单位 仅在DataTypeNumber下有效
+      len: number // Len 长度 仅在DataTypeArray DataTypeString下有效
+      dataType: string // DataType 子数据类型 仅在DataTypeArray DataTypeMap下有效
+      bool: BoolMean // Bool 布尔值含义 仅在DataTypeBool下有效
+      enum: EnumMean[] // Enum 枚举含义 仅在DataTypeEnum下有效
+      spec?: DataSpec // Spec 子数据类型规格 仅在DataTypeArray下有效
+    }
+
+    // BoolMean 布尔值含义
+    interface BoolMean {
+      trueValue: string // 为True是的含义
+      falseValue: string // 为False时的含义 class
+    }
+
+    // EnumMean 枚举含义
+    interface EnumMean {
+      name: string
+      mean: string
+    }
+
+    interface GetFuncModelsRequest extends Common.PageByNoRequest {
+      modelIds: string[]
+      name: string
+      modelType: string
+    }
+
+    interface GetFuncModelsResponse {
+      funcModels: FuncModel[]
+      pageResult: Common.PageByNoResult
+    }
+
+    interface CreateFuncModelRequest {
+      type: string
+      input: FuncModelDataType[]
+      output: FuncModelDataType[]
+      propertyType: string // 属性类型
+      eventType: string // 事件类型
+      serviceType: string // 服务类型
+      description: string // 描述
+    }
+
+    interface CreateFuncModelResponse {
+      funcModelId: string
+    }
+    interface GetFuncModelResponse extends FuncModel {
+      _: any // 占位符，避免接口返回空对象
+    }
+    interface UpdateFuncModelRequest extends FuncModel {
+      _: any // 占位符，避免接口返回空对象
+    }
   }
 }

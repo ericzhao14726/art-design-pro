@@ -5,7 +5,13 @@
 // 时间戳转时间
 export function timestampToTime(timestamp: number = Date.now(), isMs: boolean = true): string {
   const date = new Date(isMs ? timestamp : timestamp * 1000)
-  return date.toISOString().replace('T', ' ').slice(0, 19)
+  return date.toLocaleString().replace('T', ' ').replaceAll('/', '-').slice(0, 19)
+}
+
+// 时间转时间戳
+export function timeToTimestamp(time: string = '', isMs: boolean = true): number {
+  const date = new Date(time)
+  return isMs ? date.getTime() : Math.floor(date.getTime() / 1000)
 }
 
 // 数字格式化（千位分隔符）
