@@ -50,5 +50,8 @@ export enum RoutesAlias {
   ChangeLog = '/change/log', // 更新日志
   ExamplesTabs = '/examples/tabs', // 标签页
 
-  Product = '/device/product'
+  Product = '/device/product', // 产品
+  Device = '/device/device', // 设备
+  DeviceDetail = '/device/device/detail', // 设备详情
+  DataService = '/dataservice/funcmodel' // 数据服务
 }

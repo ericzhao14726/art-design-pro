@@ -78,7 +78,7 @@
       clearable: true,
       size: 'default' as const
     }
-
+    console.log('getDefaultConfig', type)
     switch (type) {
       case 'date':
         return {
@@ -188,18 +188,40 @@
 
     return [
       {
+        text: '最近15分钟',
+        value: () => {
+          const end = new Date()
+          const start = new Date(end.getTime() - 15 * 60 * 1000)
+          return [start, end] as [Date, Date]
+        }
+      },
+      {
+        text: '最近30分钟',
+        value: () => {
+          const end = new Date()
+          const start = new Date(end.getTime() - 30 * 60 * 1000)
+          return [start, end] as [Date, Date]
+        }
+      },
+      {
         text: '今天',
         value: () => {
-          const today = new Date()
-          return [today, today] as [Date, Date]
+          // 今天0点到今天23:59:59
+          const end = new Date()
+          end.setHours(23, 59, 59, 0)
+          return [new Date(), end] as [Date, Date]
         }
       },
       {
         text: '昨天',
         value: () => {
-          const yesterday = new Date()
-          yesterday.setDate(yesterday.getDate() - 1)
-          return [yesterday, yesterday] as [Date, Date]
+          // 昨天0点到昨天23:59:59
+          const end = new Date()
+          end.setDate(end.getDate() - 1)
+          end.setHours(23, 59, 59, 0)
+          const start = new Date(end.getTime())
+          start.setHours(0, 0, 0, 0)
+          return [start, end] as [Date, Date]
         }
       },
       {

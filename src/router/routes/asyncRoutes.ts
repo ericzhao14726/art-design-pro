@@ -15,6 +15,7 @@ import { WEB_LINKS } from '@/utils/constants'
  * RoutesAlias.Home 指向的是布局组件，后端返回的菜单数据中，component 字段需要指向 /index/index
  * 路由元数据（meta）：异步路由在 asyncRoutes 中配置，静态路由在 staticRoutes 中配置
  */
+
 export const asyncRoutes: AppRouteRecord[] = [
   {
     name: 'Dashboard',
@@ -62,8 +63,7 @@ export const asyncRoutes: AppRouteRecord[] = [
     component: RoutesAlias.Home,
     meta: {
       title: 'menus.device.title',
-      icon: '&#xe721;',
-      roles: ['R_SUPER', 'R_ADMIN'] // 角色权限，前端控制模式（只有拥有这些角色的用户才能访问）
+      icon: '&#xe721;'
     },
     children: [
       {
@@ -72,8 +72,47 @@ export const asyncRoutes: AppRouteRecord[] = [
         component: RoutesAlias.Product,
         meta: {
           title: 'menus.device.product',
+          keepAlive: false
+        }
+      },
+      {
+        path: 'device',
+        name: 'device',
+        component: RoutesAlias.Device,
+        meta: {
+          title: 'menus.device.device',
+          keepAlive: false
+        }
+      },
+      {
+        path: 'device/detail',
+        name: 'DeviceDetail',
+        component: RoutesAlias.DeviceDetail,
+        meta: {
+          title: 'menus.device.deviceDetail',
+          isHide: true,
           keepAlive: true,
-          fixedTab: true
+          activePath: RoutesAlias.Device // 激活菜单路径
+        }
+      }
+    ]
+  },
+  {
+    name: 'DataService',
+    path: '/data-service',
+    component: RoutesAlias.Home,
+    meta: {
+      title: 'menus.dataService.title',
+      icon: '&#xe721;'
+    },
+    children: [
+      {
+        path: 'funcmodel',
+        name: 'FuncModel',
+        component: RoutesAlias.DataService,
+        meta: {
+          title: 'menus.dataService.funcModel',
+          keepAlive: false
         }
       }
     ]

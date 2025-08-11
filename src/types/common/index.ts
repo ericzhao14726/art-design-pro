@@ -30,6 +30,7 @@ export interface Option {
   value: string | number
   disabled?: boolean
   children?: Option[]
+  filterable?: boolean
 }
 
 // 时间范围类型

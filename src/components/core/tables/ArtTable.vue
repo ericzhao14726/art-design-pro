@@ -142,7 +142,7 @@
     pageSize: 20,
     hideOnSinglePage: true,
     pageSizes: () => [10, 20, 30, 50],
-    paginationAlign: 'center',
+    paginationAlign: 'right',
     paginationSize: 'default',
     paginationLayout: '',
     showHeaderBackground: null,
