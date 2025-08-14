@@ -65,7 +65,7 @@
 <script setup lang="ts">
   import { h } from 'vue'
 
-  import { ElDialog, FormInstance, ElTag } from 'element-plus'
+  import { ElDialog, FormInstance, ElTag, ElSwitch } from 'element-plus'
   import { ElMessageBox, ElMessage } from 'element-plus'
   import type { FormRules } from 'element-plus'
   import { useCheckedColumns } from '@/composables/useCheckedColumns'
@@ -212,8 +212,11 @@
     {
       prop: 'enable',
       label: '启用',
-      formatter: (row) => {
-        return h(ElTag, { type: getTagType(row.status) }, () => buildTagText(row.status))
+      formatter: (row: any) => {
+        return h(ElSwitch, {
+          modelValue: row.enable,
+          onclick: () => updateToEnable(row.productId, !row.enable)
+        })
       }
     },
     {
@@ -330,6 +333,7 @@
       }
     })
   }
+
   const createProduct = () => {
     DeviceService.createProduct({
       name: formData.name,
@@ -357,6 +361,20 @@
       .catch((error) => {
         console.error('更新产品失败:', error)
         ElMessage.error('更新产品失败')
+      })
+  }
+
+  const updateToEnable = (productId: string, enabled: boolean) => {
+    DeviceService.updateProductStatus({
+      productId: productId,
+      toEnable: enabled
+    })
+      .then(() => {
+        getProductList()
+      })
+      .catch((error) => {
+        console.error('更新产品状态失败:', error)
+        ElMessage.error('更新产品状态失败')
       })
   }
 

@@ -176,6 +176,7 @@ declare namespace Api {
       description: string
       enable: boolean
       isOnline: boolean
+      lastOnlineTime: number
       createdAt: number
       updatedAt: number
       creator: string

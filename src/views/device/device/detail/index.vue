@@ -7,6 +7,9 @@
           <span class="category">
             {{ deviceDetail.deviceId }}
           </span>
+          <ElTag style="margin-left: 10px" :type="getOnlineTagType(deviceDetail.isOnline)">
+            {{ buildOnlineTagText(deviceDetail.isOnline) }}
+          </ElTag>
         </div>
         <ElDescriptions direction="vertical">
           <ElDescriptionsItem label="所属产品">
@@ -19,6 +22,13 @@
           <ElDescriptionsItem label="修改">
             {{ deviceDetail.editor }} /
             {{ timestampToTime(deviceDetail.updatedAt, false) }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="最后在线时间">
+            {{
+              deviceDetail.lastOnlineTime
+                ? timestampToTime(deviceDetail.lastOnlineTime, false)
+                : '-'
+            }}
           </ElDescriptionsItem>
           <ElDescriptionsItem label="描述">
             {{ deviceDetail.description }}
@@ -34,6 +44,9 @@
           <DeviceMonitor :product-id="deviceDetail.productId" :device-id="deviceDetail.deviceId" />
         </el-tab-pane>
         <el-tab-pane label="功能数据" name="funcModelData">功能数据</el-tab-pane>
+        <el-tab-pane label="终端" name="webTerm" :lazy="true">
+          <WebTerm />
+        </el-tab-pane>
       </el-tabs>
     </ElCard>
   </div>
@@ -46,6 +59,7 @@
   import { timestampToTime } from '@/utils'
   import type { TabsPaneContext } from 'element-plus'
   import DeviceMonitor from './monitor/index.vue'
+  import WebTerm from './webterm/index.vue'
 
   const router = useRoute()
   const id = router.query.id
@@ -66,6 +80,23 @@
   const activeName = ref('monitor')
   const handleClick = (tab: TabsPaneContext, event: Event) => {
     console.log(tab, event)
+  }
+
+  // 获取标签类型
+  const getOnlineTagType = (ok: boolean) => {
+    if (ok) {
+      return 'success'
+    }
+    return 'danger'
+  }
+
+  // 构建标签文本
+  const buildOnlineTagText = (ok: boolean) => {
+    let text = '离线'
+    if (ok) {
+      text = '在线'
+    }
+    return text
   }
 </script>
 
