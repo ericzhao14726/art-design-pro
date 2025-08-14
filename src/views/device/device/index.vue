@@ -258,13 +258,14 @@
     // { type: 'index', label: '序号', width: 80 }, // 序号列
     {
       prop: 'isOnline',
-      label: '在线',
-      align: 'center',
-      width: 80,
+      label: '是否在线',
       formatter: (row) => {
-        return h(ElTag, { type: getOnlineTagType(row.isOnline) }, () =>
-          buildOnlineTagText(row.isOnline)
-        )
+        return h('div', {}, [
+          h(ElTag, { type: getOnlineTagType(row.isOnline) }, () =>
+            buildOnlineTagText(row.isOnline)
+          ),
+          h('p', {}, timestampToTime(row.lastOnlineTime, false))
+        ])
       }
     },
     {
@@ -290,9 +291,12 @@
     },
     {
       prop: 'enable',
-      label: '启用',
-      formatter: (row) => {
-        return h(ElTag, { type: getTagType(row.status) }, () => buildTagText(row.status))
+      label: '是否启用',
+      formatter: (row: any) => {
+        return h(ElSwitch, {
+          modelValue: row.enable,
+          onclick: () => updateToEnable(row.deviceId, !row.enable)
+        })
       }
     },
     {
@@ -324,16 +328,16 @@
       formatter: (row: any) => {
         return h('div', [
           h(ArtButtonTable, {
+            type: 'detail',
+            onClick: () => toDetail(row)
+          }),
+          h(ArtButtonTable, {
             type: 'edit',
             onClick: () => showDialog('edit', row)
           }),
           h(ArtButtonTable, {
             type: 'delete',
             onClick: () => deleteDevice(row.deviceId)
-          }),
-          h(ArtButtonTable, {
-            type: 'detail',
-            onClick: () => toDetail(row)
           })
         ])
       }
@@ -390,6 +394,20 @@
     } finally {
       loading.value = false
     }
+  }
+
+  const updateToEnable = (productId: string, enabled: boolean) => {
+    DeviceService.updateDeviceStatus({
+      deviceId: productId,
+      toEnable: enabled
+    })
+      .then(() => {
+        getDeviceList()
+      })
+      .catch((error) => {
+        console.error('更新设备状态失败:', error)
+        ElMessage.error('更新设备状态失败')
+      })
   }
 
   const handleRefresh = () => {

@@ -119,18 +119,18 @@
     // 获取监控数据
     for (let i = 0; i < monitorMetrics.length; i++) {
       getDeviceMonitor(monitorMetrics[i].metric).then((res) => {
-        monitorMetrics[i].data = res.metricData.values.map((item: any) => {
+        monitorMetrics[i].data = res.metricData.values?.map((item: any) => {
           let rt = item.v.toString().includes('.') ? parseFloat(item.v.toFixed(2)) : item.v
           if (['NetworkRx', 'NetworkTx'].includes(monitorMetrics[i].name)) {
             rt = parseFloat((item.v / 1024 / 1024).toFixed(2))
           }
           return rt
         })
-        monitorMetrics[i].xAxis = res.metricData.values.map((item: any) =>
+        monitorMetrics[i].xAxis = res.metricData.values?.map((item: any) =>
           timestampToTime(item.t, false)
         )
-        monitorMetrics[i].data.reverse()
-        monitorMetrics[i].xAxis.reverse()
+        monitorMetrics[i].data?.reverse()
+        monitorMetrics[i].xAxis?.reverse()
       })
     }
     console.log('monitor', monitorMetrics)
