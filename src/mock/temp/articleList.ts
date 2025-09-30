@@ -1,13 +1,13 @@
-import cover1 from '@imgs/cover/img1.webp'
-import cover2 from '@imgs/cover/img2.webp'
-import cover3 from '@imgs/cover/img3.webp'
-import cover4 from '@imgs/cover/img4.webp'
-import cover5 from '@imgs/cover/img5.webp'
-import cover6 from '@imgs/cover/img6.webp'
-import cover7 from '@imgs/cover/img7.webp'
-import cover8 from '@imgs/cover/img8.webp'
-import cover9 from '@imgs/cover/img9.webp'
-import cover10 from '@imgs/cover/img10.webp'
+import cover1 from '@assets/img/cover/img1.webp'
+import cover2 from '@assets/img/cover/img2.webp'
+import cover3 from '@assets/img/cover/img3.webp'
+import cover4 from '@assets/img/cover/img4.webp'
+import cover5 from '@assets/img/cover/img5.webp'
+import cover6 from '@assets/img/cover/img6.webp'
+import cover7 from '@assets/img/cover/img7.webp'
+import cover8 from '@assets/img/cover/img8.webp'
+import cover9 from '@assets/img/cover/img9.webp'
+import cover10 from '@assets/img/cover/img10.webp'
 
 export const ArticleList = [
   {

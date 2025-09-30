@@ -30,6 +30,9 @@
                 : '-'
             }}
           </ElDescriptionsItem>
+          <ElDescriptionsItem label="IP地址">
+            {{ deviceDetail.ip || '-' }}
+          </ElDescriptionsItem>
           <ElDescriptionsItem label="描述">
             {{ deviceDetail.description }}
           </ElDescriptionsItem>
@@ -40,8 +43,12 @@
   <div class="device-manager-tabs">
     <ElCard :body-style="{ padding: '0px' }" shadow="hover" class="art-custom-card">
       <el-tabs v-model="activeName" class="device-tabs" @tab-click="handleClick">
-        <el-tab-pane v-if="deviceDetail.deviceId != ''" label="设备监控" name="monitor">
-          <DeviceMonitor :product-id="deviceDetail.productId" :device-id="deviceDetail.deviceId" />
+        <el-tab-pane label="设备监控" name="monitor">
+          <DeviceMonitor
+            v-if="deviceDetail.deviceId != ''"
+            :product-id="deviceDetail.productId"
+            :device-id="deviceDetail.deviceId"
+          />
         </el-tab-pane>
         <el-tab-pane label="功能数据" name="funcModelData">功能数据</el-tab-pane>
         <el-tab-pane label="终端" name="webTerm" :lazy="true">

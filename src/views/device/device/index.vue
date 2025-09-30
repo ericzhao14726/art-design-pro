@@ -160,23 +160,6 @@
   ]
 
   // 获取标签类型
-  const getTagType = (enable: boolean) => {
-    if (enable) {
-      return 'success'
-    }
-    return 'info'
-  }
-
-  // 构建标签文本
-  const buildTagText = (enable: boolean) => {
-    let text = '停用'
-    if (enable) {
-      text = '启用'
-    }
-    return text
-  }
-
-  // 获取标签类型
   const getOnlineTagType = (ok: boolean) => {
     if (ok) {
       return 'success'
@@ -266,6 +249,21 @@
           ),
           h('p', {}, timestampToTime(row.lastOnlineTime, false))
         ])
+      }
+    },
+    {
+      prop: 'lastOnlineTime',
+      label: '最后在线时间',
+      formatter: (row: any) => {
+        return h('p', {}, row.lastOnlineTime ? timestampToTime(row.lastOnlineTime, false) : '-')
+      },
+      sortable: true
+    },
+    {
+      prop: 'ip',
+      label: 'IP地址',
+      formatter: (row: any) => {
+        return h('p', {}, row.ip || '-')
       }
     },
     {
