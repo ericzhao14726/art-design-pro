@@ -46,7 +46,7 @@ declare namespace Api {
 
     interface PageByCursorRequest {
       cursor: string
-      count: number
+      perPage: number
     }
 
     interface PageByCursorResult {

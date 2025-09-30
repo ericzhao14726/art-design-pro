@@ -8,12 +8,19 @@
     :elColSpan="12"
   />
   <ElRow :gutter="20">
-    <ElCol :xs="24" :md="12" :lg="8" v-for="item in monitorMetrics" :key="item.name">
+    <ElCol :xs="24" :md="24" :lg="12" v-for="item in monitorMetrics" :key="item.name">
       <div class="monitor-card art-custom-card">
         <div class="card-header">
           <span>{{ item.name }}</span>
         </div>
-        <ArtLineChart :data="item.data" :xAxisData="item.xAxis" symbol="none" :symbolSize="7" />
+        <ArtLineChart
+          :data="item.data"
+          :xAxisData="item.xAxis"
+          symbol="none"
+          :symbolSize="7"
+          :loading="true"
+          :showLegend="true"
+        />
       </div>
     </ElCol>
   </ElRow>
@@ -54,9 +61,11 @@
       text: '今天',
       value: () => {
         // 今天0点到今天23:59:59
+        const start = new Date()
+        start.setHours(0, 0, 0, 0)
         const end = new Date()
         end.setHours(23, 59, 59, 0)
-        return [new Date(), end] as [Date, Date]
+        return [start, end] as [Date, Date]
       }
     },
     {
@@ -119,21 +128,20 @@
     // 获取监控数据
     for (let i = 0; i < monitorMetrics.length; i++) {
       getDeviceMonitor(monitorMetrics[i].metric).then((res) => {
-        monitorMetrics[i].data = res.metricData.values?.map((item: any) => {
-          let rt = item.v.toString().includes('.') ? parseFloat(item.v.toFixed(2)) : item.v
-          if (['NetworkRx', 'NetworkTx'].includes(monitorMetrics[i].name)) {
-            rt = parseFloat((item.v / 1024 / 1024).toFixed(2))
-          }
-          return rt
-        })
-        monitorMetrics[i].xAxis = res.metricData.values?.map((item: any) =>
-          timestampToTime(item.t, false)
-        )
-        monitorMetrics[i].data?.reverse()
-        monitorMetrics[i].xAxis?.reverse()
+        const values = res.metricData.values
+        let data = []
+        let xAxis = []
+        for (let j = 0; j < values.length; j++) {
+          // 保留两位小数
+          data.push(values[j].v)
+          xAxis.push(timestampToTime(values[j].t, false))
+        }
+        data.reverse()
+        xAxis.reverse()
+        monitorMetrics[i].data = data
+        monitorMetrics[i].xAxis = xAxis
       })
     }
-    console.log('monitor', monitorMetrics)
   }
 
   // 表单项变更处理
@@ -167,28 +175,47 @@
   }
 
   const monitorMetrics = reactive<MonitorMetric[]>([
-    { name: 'CPU', metric: 'device_cpu_usage_percent', data: [], xAxis: [] },
-    { name: 'Memory', metric: 'device_memory_usage_percent', data: [], xAxis: [] },
-    { name: 'Disk', metric: 'device_disk_usage_percent', data: [], xAxis: [] },
-    { name: 'NetworkRx', metric: 'device_network_receive_bytes', data: [], xAxis: [] },
-    { name: 'NetworkTx', metric: 'device_network_transmit_bytes', data: [], xAxis: [] }
+    { name: 'CPU使用率 (%)', metric: 'device_cpu_usage_percent', data: [], xAxis: [] },
+    { name: '内存使用率 (%)', metric: 'device_memory_usage_percent', data: [], xAxis: [] },
+    { name: '磁盘使用率 (%)', metric: 'device_disk_usage_percent', data: [], xAxis: [] },
+    { name: '网络入流量 (Bytes/s)', metric: 'device_network_receive_bytes', data: [], xAxis: [] },
+    { name: '网络出流量 (Bytes/s)', metric: 'device_network_transmit_bytes', data: [], xAxis: [] }
   ])
-
   const getDeviceMonitor = async (metricName: string) => {
     const startTime = timeToTimestamp(formFilters.dataTimeRanges[0], false)
     const endTime = timeToTimestamp(formFilters.dataTimeRanges[1], false)
-    const params = <Api.Device.GetMonitorDataRequest>{
-      productId: props.productId,
-      deviceId: props.deviceId,
-      name: metricName,
-      queryBaseTime: endTime,
-      beforeSecond: endTime - startTime,
-      cursor: '',
-      count: 1000
+    let cursor = ''
+    let allValues: any[] = []
+
+    try {
+      do {
+        const params = <Api.Device.GetMonitorDataRequest>{
+          productId: props.productId,
+          deviceId: props.deviceId,
+          name: metricName,
+          queryBaseTime: endTime,
+          beforeSecond: endTime - startTime,
+          cursor: cursor,
+          perPage: 10000
+        }
+        const res = await DeviceService.getMonitorData(params)
+        if (!res.metricData || !res.metricData.values) {
+          throw new Error('Invalid response format')
+        }
+        allValues = [...allValues, ...res.metricData.values]
+        cursor = res.pageResult.cursor
+      } while (cursor)
+
+      return {
+        metricData: {
+          name: metricName,
+          values: allValues
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch monitor data:', error)
+      throw error
     }
-    console.log('getDeviceMonitor params:', params)
-    const res = await DeviceService.getMonitorData(params)
-    return res
   }
   onMounted(() => {
     setTimeout(() => {

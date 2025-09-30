@@ -29,8 +29,7 @@
       <el-button
         type="primary"
         @click="
-          showReconnect = false
-          dialogVisible = true
+          showReconnect = false; dialogVisible = true
         "
         >重新连接</el-button
       >

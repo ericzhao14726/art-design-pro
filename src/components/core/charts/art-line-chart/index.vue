@@ -87,7 +87,9 @@
       const multiData = props.data as LineDataItem[]
       return (
         !multiData.length ||
-        multiData.every((item) => !item.data?.length || item.data.every((val) => val === 0))
+        multiData.every(
+          (item) => !item.data?.length || (item.data && item.data.every((val) => val === 0))
+        )
       )
     }
 
