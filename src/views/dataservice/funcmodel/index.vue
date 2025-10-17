@@ -107,8 +107,6 @@
   import { timestampToTime } from '@/utils/dataprocess/format'
   import { useWindowSize } from '@vueuse/core'
   import { defineOptions } from 'vue'
-  import { router } from '@/router'
-  import { RoutesAlias } from '@/router/routesAlias'
   import { DataServiceService } from '@/api/dataServiceApi'
   import PropertyFormItem from './property/index.vue'
   import EventFormItem from './event/index.vue'

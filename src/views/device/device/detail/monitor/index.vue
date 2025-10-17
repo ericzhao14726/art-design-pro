@@ -175,11 +175,11 @@
   }
 
   const monitorMetrics = reactive<MonitorMetric[]>([
-    { name: 'CPU使用率 (%)', metric: 'device_cpu_usage_percent', data: [], xAxis: [] },
-    { name: '内存使用率 (%)', metric: 'device_memory_usage_percent', data: [], xAxis: [] },
-    { name: '磁盘使用率 (%)', metric: 'device_disk_usage_percent', data: [], xAxis: [] },
-    { name: '网络入流量 (Bytes/s)', metric: 'device_network_receive_bytes', data: [], xAxis: [] },
-    { name: '网络出流量 (Bytes/s)', metric: 'device_network_transmit_bytes', data: [], xAxis: [] }
+    { name: 'CPU使用率 (%)', metric: 'cpu_usage_percent', data: [], xAxis: [] },
+    { name: '内存使用率 (%)', metric: 'memory_usage_percent', data: [], xAxis: [] },
+    { name: '磁盘使用率 (%)', metric: 'disk_usage_percent', data: [], xAxis: [] },
+    { name: '网络入流量 (Bytes/s)', metric: 'network_receive_bytes', data: [], xAxis: [] },
+    { name: '网络出流量 (Bytes/s)', metric: 'network_transmit_bytes', data: [], xAxis: [] }
   ])
   const getDeviceMonitor = async (metricName: string) => {
     const startTime = timeToTimestamp(formFilters.dataTimeRanges[0], false)
