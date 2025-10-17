@@ -26,90 +26,137 @@ export class DeviceService {
   }
 
   static getProducts(params: Api.Device.GetProductsRequest) {
-    const res = request.get<Api.Device.GetProductsResponse>({
-      url: '/api/product/list',
+    return request.post<Api.Device.GetProductsResponse>({
+      url: '/api/device-manager/getProducts',
       params
     })
-    return res
   }
 
   static getProduct(productId: string) {
-    return request.get<Api.Device.Product>({
-      url: 'product/' + productId
+    return request.post<Api.Device.Product>({
+      url: '/api/device-manager/getProduct',
+      params: { productId }
     })
   }
 
   static createProduct(params: Api.Device.CreateProductRequest) {
     return request.post<Api.Device.CreateProductResponse>({
-      url: '/api/product',
+      url: '/api/device-manager/createProduct',
       params
     })
   }
 
-  static deleteProduct(params: string[]) {
-    return request.del<any>({
-      url: '/api/product/' + params.join(',')
+  static deleteProduct(productIds: string[]) {
+    return request.post<any>({
+      url: '/api/device-manager/deleteProduct',
+      params: { productIds }
     })
   }
 
   static updateProduct(params: Api.Device.UpdateProductRequest) {
-    return request.put<any>({
-      url: '/api/product',
+    return request.post<any>({
+      url: '/api/device-manager/modifyProduct',
       params
     })
   }
 
   static updateProductStatus(params: Api.Device.UpdateProductStatusRequest) {
-    return request.put<any>({
-      url: '/api/product/status',
+    return request.post<any>({
+      url: '/api/device-manager/modifyProductStatus',
       params
     })
   }
 
   static getDevices(params: Api.Device.GetDevicesRequest) {
-    return request.get<Api.Device.GetDevicesResponse>({
-      url: '/api/device/list',
+    return request.post<Api.Device.GetDevicesResponse>({
+      url: '/api/device-manager/getDevices',
       params
     })
   }
 
   static getDevice(deviceId: string) {
-    return request.get<Api.Device.Device>({
-      url: '/api/device/' + deviceId
+    return request.post<Api.Device.Device>({
+      url: '/api/device-manager/getDevice',
+      params: { deviceId }
     })
   }
 
   static createDevice(params: Api.Device.CreateDeviceRequest) {
     return request.post<Api.Device.CreateDeviceResponse>({
-      url: '/api/device',
+      url: '/api/device-manager/createDevice',
       params
     })
   }
 
   static deleteDevice(deviceIds: string[]) {
-    return request.del<any>({
-      url: '/api/device/' + deviceIds.join(',')
+    return request.post<any>({
+      url: '/api/device-manager/deleteDevice',
+      params: { deviceIds }
     })
   }
 
   static updateDevice(params: Api.Device.UpdateDeviceRequest) {
-    return request.put<any>({
-      url: '/api/device',
+    return request.post<any>({
+      url: '/api/device-manager/modifyDevice',
       params
     })
   }
 
   static updateDeviceStatus(params: Api.Device.UpdateDeviceStatusRequest) {
-    return request.put<any>({
-      url: '/api/device/status',
+    return request.post<any>({
+      url: '/api/device-manager/modifyDeviceStatus',
       params
     })
   }
 
   static getMonitorData(params: Api.Device.GetMonitorDataRequest) {
-    return request.get<Api.Device.GetMonitorDataResponse>({
-      url: '/api/device/monitor',
+    return request.post<Api.Device.GetMonitorDataResponse>({
+      url: '/api/device-manager/getMonitorData',
       params
+    })
+  }
+
+  // 功能模型相关API
+  static getFuncModels(params: Api.DataService.GetFuncModelsRequest) {
+    return request.post<Api.DataService.GetFuncModelsResponse>({
+      url: '/api/device-manager/getFuncModels',
+      params
+    })
+  }
+
+  static getFuncModel(funcModelId: string) {
+    return request.post<Api.DataService.GetFuncModelResponse>({
+      url: '/api/device-manager/getFuncModel',
+      params: { funcModelId }
+    })
+  }
+
+  static createFuncModel(params: Api.DataService.CreateFuncModelRequest) {
+    return request.post<Api.DataService.CreateFuncModelResponse>({
+      url: '/api/device-manager/createFuncModel',
+      params
+    })
+  }
+
+  static deleteFuncModel(funcModelIds: string[]) {
+    return request.post<any>({
+      url: '/api/device-manager/deleteFuncModel',
+      params: { funcModelIds }
+    })
+  }
+
+  static updateFuncModel(params: Api.DataService.UpdateFuncModelRequest) {
+    return request.post<any>({
+      url: '/api/device-manager/modifyFuncModel',
+      params
+    })
+  }
+
+  // Web终端
+  static createWebTerminal(deviceId: string) {
+    return request.post<any>({
+      url: '/api/device-manager/createWebTerminal',
+      params: { deviceId }
     })
   }
 }

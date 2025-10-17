@@ -159,6 +159,12 @@ declare namespace Api {
     interface GetProductsRequest extends Common.PageByNoRequest {
       name: string
     }
+    interface GetProductRequest {
+      productId: string
+    }
+    interface DeleteProductRequest {
+      productIds: string[]
+    }
     interface UpdateProductRequest {
       productId: string
       name: string
@@ -209,6 +215,12 @@ declare namespace Api {
       description: string
     }
 
+    interface GetDeviceRequest {
+      deviceId: string
+    }
+    interface DeleteDeviceRequest {
+      deviceIds: string[]
+    }
     interface UpdateDeviceStatusRequest {
       deviceId: string
       toEnable: boolean
@@ -294,6 +306,14 @@ declare namespace Api {
     interface GetFuncModelsResponse {
       funcModels: FuncModel[]
       pageResult: Common.PageByNoResult
+    }
+
+    interface GetFuncModelRequest {
+      funcModelId: string
+    }
+
+    interface DeleteFuncModelRequest {
+      funcModelIds: string[]
     }
 
     interface CreateFuncModelRequest {
