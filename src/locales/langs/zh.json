@@ -311,6 +311,7 @@
     "device": {
       "title": "设备管理",
       "product": "产品",
+      "productDetail": "产品详情",
       "device": "设备",
       "deviceDetail": "设备详情"
     },

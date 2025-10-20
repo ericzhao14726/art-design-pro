@@ -2,34 +2,36 @@ import request from '@/utils/http'
 
 export class DataServiceService {
   static getFuncModels(params: Api.DataService.GetFuncModelsRequest) {
-    return request.get<Api.DataService.GetFuncModelsResponse>({
-      url: '/api/data-service/func-model/list',
+    return request.post<Api.DataService.GetFuncModelsResponse>({
+      url: '/api/device-manager/getFuncModels',
       params
     })
   }
 
   static getFuncModel(modelId: string) {
-    return request.get<Api.DataService.GetFuncModelResponse>({
-      url: '/api/data-service/func-model/' + modelId
+    return request.post<Api.DataService.GetFuncModelResponse>({
+      url: '/api/device-manager/getFuncModel',
+      params: { funcModelId: modelId }
     })
   }
 
   static createFuncModel(params: Api.DataService.CreateFuncModelRequest) {
     return request.post<Api.DataService.CreateFuncModelResponse>({
-      url: '/api/data-service/func-model',
+      url: '/api/device-manager/createFuncModel',
       params
     })
   }
 
   static deleteFuncModel(modelIds: string[]) {
-    return request.del<any>({
-      url: '/api/data-service/func-model/' + modelIds.join(',')
+    return request.post<any>({
+      url: '/api/device-manager/deleteFuncModel',
+      params: { funcModelIds: modelIds }
     })
   }
 
   static updateFuncModel(params: Api.DataService.UpdateFuncModelRequest) {
-    return request.put<any>({
-      url: '/api/data-service/func-model',
+    return request.post<any>({
+      url: '/api/device-manager/modifyFuncModel',
       params
     })
   }

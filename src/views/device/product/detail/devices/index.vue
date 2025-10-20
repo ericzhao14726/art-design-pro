@@ -1,6 +1,6 @@
 <template>
   <ArtTableFullScreen>
-    <div class="product-page" id="table-full-screen">
+    <div class="device-page" id="table-full-screen">
       <!-- 搜索栏 -->
       <ArtSearchBar
         v-model:filter="formFilters"
@@ -13,7 +13,7 @@
         <!-- 表格头部 -->
         <ArtTableHeader v-model:columns="columnChecks" @refresh="handleRefresh">
           <template #left>
-            <ElButton @click="showDialog('add')">新增产品</ElButton>
+            <ElButton @click="showDialog('add')">新增设备</ElButton>
           </template>
         </ArtTableHeader>
 
@@ -38,12 +38,12 @@
 
         <ElDialog
           v-model="dialogVisible"
-          :title="dialogType === 'add' ? '添加产品' : '编辑产品'"
+          :title="dialogType === 'add' ? '添加设备' : '编辑设备'"
           width="30%"
           align-center
         >
           <ElForm ref="formRef" :model="formData" :rules="rules" label-width="80px">
-            <ElFormItem label="产品名称" prop="name">
+            <ElFormItem label="设备名称" prop="name">
               <ElInput v-model="formData.name" />
             </ElFormItem>
             <ElFormItem label="描述" prop="description">
@@ -64,7 +64,6 @@
 
 <script setup lang="ts">
   import { h } from 'vue'
-
   import { ElDialog, FormInstance, ElTag, ElSwitch } from 'element-plus'
   import { ElMessageBox, ElMessage } from 'element-plus'
   import type { FormRules } from 'element-plus'
@@ -76,7 +75,12 @@
   import { useRouter } from 'vue-router'
   const { width } = useWindowSize()
 
-  defineOptions({ name: 'Product' }) // 定义组件名称，用于 KeepAlive 缓存控制
+  defineOptions({ name: 'ProductDevices' })
+
+  // 接收产品ID作为props
+  const props = defineProps<{
+    productId: string
+  }>()
 
   const router = useRouter()
   const dialogType = ref('add')
@@ -110,14 +114,14 @@
   const handleReset = () => {
     Object.assign(formFilters, { ...initialSearchState })
     pagination.currentPage = 1 // 重置到第一页
-    getProductList()
+    getDeviceList()
   }
 
   // 搜索处理
   const handleSearch = () => {
     console.log('搜索参数:', formFilters)
     pagination.currentPage = 1 // 搜索时重置到第一页
-    getProductList()
+    getDeviceList()
   }
 
   // 表单项变更处理
@@ -128,7 +132,7 @@
   // 表单配置项
   const formItems: SearchFormItem[] = [
     {
-      label: '产品名称',
+      label: '设备名称',
       prop: 'name',
       type: 'input',
       config: {
@@ -137,23 +141,6 @@
       onChange: handleFormChange
     }
   ]
-
-  // 获取标签类型
-  const getTagType = (enable: boolean) => {
-    if (enable) {
-      return 'success'
-    }
-    return 'info'
-  }
-
-  // 构建标签文本
-  const buildTagText = (enable: boolean) => {
-    let text = '停用'
-    if (enable) {
-      text = '启用'
-    }
-    return text
-  }
 
   // 显示对话框
   const showDialog = (type: string, row?: any) => {
@@ -166,7 +153,7 @@
     }
 
     if (type === 'edit' && row) {
-      formData.productId = row.productId
+      formData.deviceId = row.deviceId
       formData.name = row.name
       formData.description = row.description
     } else {
@@ -175,49 +162,55 @@
     }
   }
 
-  // 删除产品
-  const deleteProduct = (productId: string) => {
-    ElMessageBox.confirm('确定要删除该产品吗？', '删除产品', {
+  // 删除设备
+  const deleteDevice = (deviceId: string) => {
+    ElMessageBox.confirm('确定要删除该设备吗？', '删除设备', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'error'
     }).then(() => {
-      DeviceService.deleteProduct([productId])
+      DeviceService.deleteDevice([deviceId])
         .then(() => {
-          getProductList()
+          getDeviceList()
           ElMessage.success('删除成功')
         })
         .catch((error) => {
-          console.error('删除产品失败:', error)
-          ElMessage.error('删除产品失败')
+          console.error('删除设备失败:', error)
+          ElMessage.error('删除设备失败')
         })
     })
   }
 
-  // 跳转到产品详情
-  const goToProductDetail = (productId: string) => {
+  // 跳转到设备详情
+  const goToDeviceDetail = (deviceId: string) => {
     router.push({
-      path: '/device/product/detail',
-      query: { id: productId }
+      path: '/device/device/detail',
+      query: { id: deviceId }
     })
   }
 
   // 动态列配置
   const { columnChecks, columns } = useCheckedColumns(() => [
-    // { type: 'selection' }, // 勾选列
-    // { type: 'expand', label: '展开', width: 80 }, // 展开列
-    // { type: 'index', label: '序号', width: 80 }, // 序号列
     {
       prop: 'id-name',
       label: '名称/ID',
       minWidth: width.value < 500 ? 220 : '',
       formatter: (row: any) => {
-        return h('div', { class: 'product', style: 'display: flex; align-items: center' }, [
+        return h('div', { class: 'device', style: 'display: flex; align-items: center' }, [
           h('div', {}, [
-            h('p', { class: 'product-name' }, row.name),
-            h('p', { class: 'email' }, row.productId)
+            h('p', { class: 'device-name' }, row.name),
+            h('p', { class: 'email' }, row.deviceId)
           ])
         ])
+      }
+    },
+    {
+      prop: 'isOnline',
+      label: '在线状态',
+      formatter: (row: any) => {
+        return h(ElTag, { type: row.isOnline ? 'success' : 'danger' }, () => 
+          row.isOnline ? '在线' : '离线'
+        )
       }
     },
     {
@@ -226,15 +219,22 @@
       formatter: (row: any) => {
         return h(ElSwitch, {
           modelValue: row.enable,
-          onclick: () => updateToEnable(row.productId, !row.enable)
+          onclick: () => updateToEnable(row.deviceId, !row.enable)
         })
+      }
+    },
+    {
+      prop: 'lastOnlineTime',
+      label: '最后在线时间',
+      formatter: (row: any) => {
+        return row.lastOnlineTime ? timestampToTime(row.lastOnlineTime, false) : '-'
       }
     },
     {
       prop: 'createdAt',
       label: '创建',
       formatter: (row: any) => {
-        return h('div', { class: 'product', style: 'display: flex; align-items: center' }, [
+        return h('div', { class: 'device', style: 'display: flex; align-items: center' }, [
           h('div', {}, [h('p', row.creator), h('p', timestampToTime(row.createdAt, false))])
         ])
       },
@@ -244,7 +244,7 @@
       prop: 'updatedAt',
       label: '更新',
       formatter: (row: any) => {
-        return h('div', { class: 'product', style: 'display: flex; align-items: center' }, [
+        return h('div', { class: 'device', style: 'display: flex; align-items: center' }, [
           h('div', {}, [h('p', row.editor), h('p', timestampToTime(row.updatedAt, false))])
         ])
       },
@@ -254,13 +254,11 @@
       prop: 'operation',
       label: '操作',
       width: 180,
-      // fixed: 'right', // 固定在右侧
-      // disabled: true,
       formatter: (row: any) => {
         return h('div', [
           h(ArtButtonTable, {
             type: 'detail',
-            onClick: () => goToProductDetail(row.productId)
+            onClick: () => goToDeviceDetail(row.deviceId)
           }),
           h(ArtButtonTable, {
             type: 'edit',
@@ -268,7 +266,7 @@
           }),
           h(ArtButtonTable, {
             type: 'delete',
-            onClick: () => deleteProduct(row.productId)
+            onClick: () => deleteDevice(row.deviceId)
           })
         ])
       }
@@ -280,28 +278,29 @@
 
   // 表单数据
   const formData = reactive({
-    productId: '',
+    deviceId: '',
     name: '',
     description: ''
   })
 
   onMounted(() => {
-    getProductList()
+    getDeviceList()
   })
 
-  // 获取产品列表数据
-  const getProductList = async () => {
+  // 获取设备列表数据
+  const getDeviceList = async () => {
     loading.value = true
     try {
       const { currentPage, pageSize } = pagination
 
-      const getProductsResp = await DeviceService.getProducts({
+      const getDevicesResp = await DeviceService.getDevices({
+        productId: props.productId, // 使用产品ID过滤设备
         name: formFilters.name,
         pageNo: currentPage,
         perPage: pageSize
       })
-      tableData.value = getProductsResp.products == null ? [] : getProductsResp.products
-      const pageRes = getProductsResp.pageResult
+      tableData.value = getDevicesResp.devices == null ? [] : getDevicesResp.devices
+      const pageRes = getDevicesResp.pageResult
       // 更新分页信息
       Object.assign(pagination, {
         currentPage: pageRes.currentPageNo,
@@ -309,14 +308,14 @@
         total: pageRes.totalCount
       })
     } catch (error) {
-      console.error('获取产品列表失败:', error)
+      console.error('获取设备列表失败:', error)
     } finally {
       loading.value = false
     }
   }
 
   const handleRefresh = () => {
-    getProductList()
+    getDeviceList()
   }
 
   // 处理表格行选择变化
@@ -327,7 +326,7 @@
   // 表单验证规则
   const rules = reactive<FormRules>({
     name: [
-      { required: true, message: '请输入产品名', trigger: 'blur' },
+      { required: true, message: '请输入设备名', trigger: 'blur' },
       { min: 2, max: 20, message: '长度在 2 到 20 个字符', trigger: 'blur' }
     ]
   })
@@ -339,75 +338,78 @@
     await formRef.value.validate((valid) => {
       if (valid) {
         if (dialogType.value === 'add') {
-          createProduct()
+          createDevice()
         } else {
-          updateProduct()
+          updateDevice()
         }
-        ElMessage.success(dialogType.value === 'add' ? '添加成功' : '更新成功')
-        dialogVisible.value = false
       }
     })
   }
 
-  const createProduct = () => {
-    DeviceService.createProduct({
+  const createDevice = () => {
+    DeviceService.createDevice({
+      productId: props.productId, // 关联到当前产品
       name: formData.name,
       description: formData.description
     })
       .then(() => {
-        getProductList()
+        getDeviceList()
+        ElMessage.success('添加成功')
+        dialogVisible.value = false
       })
       .catch((error) => {
-        console.error('添加产品失败:', error)
-        ElMessage.error('添加产品失败')
+        console.error('添加设备失败:', error)
+        ElMessage.error('添加设备失败')
       })
   }
 
-  const updateProduct = () => {
+  const updateDevice = () => {
     console.log('to update', formData)
-    DeviceService.updateProduct({
-      productId: formData.productId,
+    DeviceService.updateDevice({
+      deviceId: formData.deviceId,
       name: formData.name,
       description: formData.description
     })
       .then(() => {
-        getProductList()
+        getDeviceList()
+        ElMessage.success('更新成功')
+        dialogVisible.value = false
       })
       .catch((error) => {
-        console.error('更新产品失败:', error)
-        ElMessage.error('更新产品失败')
+        console.error('更新设备失败:', error)
+        ElMessage.error('更新设备失败')
       })
   }
 
-  const updateToEnable = (productId: string, enabled: boolean) => {
-    DeviceService.updateProductStatus({
-      productId: productId,
+  const updateToEnable = (deviceId: string, enabled: boolean) => {
+    DeviceService.updateDeviceStatus({
+      deviceId: deviceId,
       toEnable: enabled
     })
       .then(() => {
-        getProductList()
+        getDeviceList()
       })
       .catch((error) => {
-        console.error('更新产品状态失败:', error)
-        ElMessage.error('更新产品状态失败')
+        console.error('更新设备状态失败:', error)
+        ElMessage.error('更新设备状态失败')
       })
   }
 
   // 处理表格分页变化
   const handleSizeChange = (newPageSize: number) => {
     pagination.pageSize = newPageSize
-    getProductList()
+    getDeviceList()
   }
 
   const handleCurrentChange = (newCurrentPage: number) => {
     pagination.currentPage = newCurrentPage
-    getProductList()
+    getDeviceList()
   }
 </script>
 
 <style lang="scss" scoped>
-  .product-page {
-    :deep(.product) {
+  .device-page {
+    :deep(.device) {
       .avatar {
         width: 40px;
         height: 40px;
@@ -415,7 +417,7 @@
       }
 
       > div {
-        .product-name {
+        .device-name {
           font-weight: 500;
           color: var(--art-text-gray-800);
         }

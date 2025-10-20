@@ -298,6 +298,7 @@ declare namespace Api {
     }
 
     interface GetFuncModelsRequest extends Common.PageByNoRequest {
+      productId?: string
       modelIds: string[]
       name: string
       modelType: string
@@ -317,6 +318,7 @@ declare namespace Api {
     }
 
     interface CreateFuncModelRequest {
+      productId: string
       type: string
       input: FuncModelDataType[]
       output: FuncModelDataType[]

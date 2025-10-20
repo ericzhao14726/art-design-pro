@@ -311,6 +311,7 @@
     "device": {
       "title": "Device Manager",
       "product": "Product",
+      "productDetail": "Product Detail",
       "device": "Device",
       "deviceDetail": "Device Detail"
     },

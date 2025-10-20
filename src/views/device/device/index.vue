@@ -240,33 +240,6 @@
     // { type: 'expand', label: '展开', width: 80 }, // 展开列
     // { type: 'index', label: '序号', width: 80 }, // 序号列
     {
-      prop: 'isOnline',
-      label: '是否在线',
-      formatter: (row) => {
-        return h('div', {}, [
-          h(ElTag, { type: getOnlineTagType(row.isOnline) }, () =>
-            buildOnlineTagText(row.isOnline)
-          ),
-          h('p', {}, timestampToTime(row.lastOnlineTime, false))
-        ])
-      }
-    },
-    {
-      prop: 'lastOnlineTime',
-      label: '最后在线时间',
-      formatter: (row: any) => {
-        return h('p', {}, row.lastOnlineTime ? timestampToTime(row.lastOnlineTime, false) : '-')
-      },
-      sortable: true
-    },
-    {
-      prop: 'ip',
-      label: 'IP地址',
-      formatter: (row: any) => {
-        return h('p', {}, row.ip || '-')
-      }
-    },
-    {
       prop: 'id-name',
       label: '名称/ID',
       minWidth: width.value < 500 ? 220 : '',
@@ -285,6 +258,32 @@
       minWidth: width.value < 500 ? 220 : '',
       formatter: (row: any) => {
         return h('p', {}, '' + row.productName + '（' + row.productId + '）')
+      }
+    },
+    {
+      prop: 'isOnline',
+      label: '是否在线',
+      formatter: (row) => {
+        return h('div', {}, [
+          h(ElTag, { type: getOnlineTagType(row.isOnline) }, () =>
+            buildOnlineTagText(row.isOnline)
+          ),
+        ])
+      }
+    },
+    {
+      prop: 'lastOnlineTime',
+      label: '最后在线时间',
+      formatter: (row: any) => {
+        return h('p', {}, row.lastOnlineTime ? timestampToTime(row.lastOnlineTime, false) : '-')
+      },
+      sortable: true
+    },
+    {
+      prop: 'ip',
+      label: 'IP地址',
+      formatter: (row: any) => {
+        return h('p', {}, row.ip || '-')
       }
     },
     {
