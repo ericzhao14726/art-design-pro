@@ -4,7 +4,6 @@
     "dbaeumer.vscode-eslint",
     "esbenp.prettier-vscode",
     "stylelint.vscode-stylelint",
-    "lokalise.i18n-ally",
-    "bradlc.vscode-tailwindcss"
+    "lokalise.i18n-ally"
   ]
 }
