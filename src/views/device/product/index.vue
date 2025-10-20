@@ -1,190 +1,228 @@
 <template>
-  <ArtTableFullScreen>
-    <div class="product-page" id="table-full-screen">
-      <!-- 搜索栏 -->
-      <ArtSearchBar
-        v-model:filter="formFilters"
-        :items="formItems"
-        @reset="handleReset"
-        @search="handleSearch"
-      ></ArtSearchBar>
+  <div class="product-page art-full-height">
+    <!-- 搜索栏 -->
+    <ProductSearch v-model="searchForm" @search="handleSearch" @reset="resetSearchParams"></ProductSearch>
 
-      <ElCard shadow="never" class="art-table-card">
-        <!-- 表格头部 -->
-        <ArtTableHeader v-model:columns="columnChecks" @refresh="handleRefresh">
-          <template #left>
-            <ElButton @click="showDialog('add')">新增产品</ElButton>
-          </template>
-        </ArtTableHeader>
+    <ElCard class="art-table-card" shadow="never">
+      <!-- 表格头部 -->
+      <ArtTableHeader v-model:columns="columnChecks" :loading="loading" @refresh="refreshData">
+        <template #left>
+          <ElSpace wrap>
+            <ElButton @click="showDialog('add')" v-ripple>新增产品</ElButton>
+          </ElSpace>
+        </template>
+      </ArtTableHeader>
 
-        <!-- 表格 -->
-        <ArtTable
-          ref="tableRef"
-          row-key="id"
-          :loading="loading"
-          :data="tableData"
-          :currentPage="pagination.currentPage"
-          :pageSize="pagination.pageSize"
-          :total="pagination.total"
-          :marginTop="10"
-          @selection-change="handleSelectionChange"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-        >
-          <template #default>
-            <ElTableColumn v-for="col in columns" :key="col.prop || col.type" v-bind="col" />
-          </template>
-        </ArtTable>
+      <!-- 表格 -->
+      <ArtTable
+        :loading="loading"
+        :data="data"
+        :columns="columns"
+        :pagination="pagination"
+        @selection-change="handleSelectionChange"
+        @pagination:size-change="handleSizeChange"
+        @pagination:current-change="handleCurrentChange"
+      >
+      </ArtTable>
 
-        <ElDialog
-          v-model="dialogVisible"
-          :title="dialogType === 'add' ? '添加产品' : '编辑产品'"
-          width="30%"
-          align-center
-        >
-          <ElForm ref="formRef" :model="formData" :rules="rules" label-width="80px">
-            <ElFormItem label="产品名称" prop="name">
-              <ElInput v-model="formData.name" />
-            </ElFormItem>
-            <ElFormItem label="描述" prop="description">
-              <ElInput v-model="formData.description" />
-            </ElFormItem>
-          </ElForm>
-          <template #footer>
-            <div class="dialog-footer">
-              <ElButton @click="dialogVisible = false">取消</ElButton>
-              <ElButton type="primary" @click="handleSubmit">提交</ElButton>
-            </div>
-          </template>
-        </ElDialog>
-      </ElCard>
-    </div>
-  </ArtTableFullScreen>
+      <!-- 产品弹窗 -->
+      <ProductDialog
+        v-model:visible="dialogVisible"
+        :type="dialogType"
+        :product-data="currentProductData"
+        @submit="handleDialogSubmit"
+      />
+    </ElCard>
+  </div>
 </template>
 
 <script setup lang="ts">
-  import { h } from 'vue'
-
-  import { ElDialog, FormInstance, ElTag, ElSwitch } from 'element-plus'
-  import { ElMessageBox, ElMessage } from 'element-plus'
-  import type { FormRules } from 'element-plus'
-  import { useCheckedColumns } from '@/composables/useCheckedColumns'
+  import { h, nextTick } from 'vue'
+  import { ElTag, ElSwitch, ElMessageBox, ElMessage } from 'element-plus'
+  import { useTable } from '@/composables/useTable'
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
-  import { SearchChangeParams, SearchFormItem } from '@/types'
   import { DeviceService } from '@/api/deviceApi'
   import { timestampToTime } from '@/utils/dataprocess/format'
   import { useRouter } from 'vue-router'
+  import { useWindowSize } from '@vueuse/core'
+  import ProductSearch from './modules/product-search.vue'
+  import ProductDialog from './modules/product-dialog.vue'
+
   const { width } = useWindowSize()
 
-  defineOptions({ name: 'Product' }) // 定义组件名称，用于 KeepAlive 缓存控制
+  defineOptions({ name: 'Product' })
 
   const router = useRouter()
-  const dialogType = ref('add')
+
+  // 弹窗相关
+  const dialogType = ref<'add' | 'edit'>('add')
   const dialogVisible = ref(false)
-  const loading = ref(false)
+  const currentProductData = ref<Partial<any>>({})
 
-  // 定义表单搜索初始值
-  const initialSearchState = {
-    name: ''
-  }
-
-  // 响应式表单数据
-  const formFilters = reactive({ ...initialSearchState })
-
-  const pagination = reactive({
-    currentPage: 1,
-    pageSize: 10,
-    total: 0
-  })
-
-  // 表格数据
-  const tableData = ref<any[]>([])
-
-  // 表格实例引用
-  const tableRef = ref()
-
-  // 选中的行数据
+  // 选中行
   const selectedRows = ref<any[]>([])
 
-  // 重置表单
-  const handleReset = () => {
-    Object.assign(formFilters, { ...initialSearchState })
-    pagination.currentPage = 1 // 重置到第一页
-    getProductList()
+  // 搜索表单
+  const searchForm = ref({
+    name: ''
+  })
+
+  // API 请求函数适配器
+  const fetchProductList = async (params: any) => {
+    const response = await DeviceService.getProducts({
+      name: params.name || '',
+      pageNo: params.current || 1,
+      perPage: params.size || 10
+    })
+    
+    return {
+      records: response.products || [],
+      current: response.pageResult.currentPageNo,
+      size: params.size || 10,
+      total: response.pageResult.totalCount
+    }
   }
 
-  // 搜索处理
-  const handleSearch = () => {
-    console.log('搜索参数:', formFilters)
-    pagination.currentPage = 1 // 搜索时重置到第一页
-    getProductList()
-  }
-
-  // 表单项变更处理
-  const handleFormChange = (params: SearchChangeParams): void => {
-    console.log('表单项变更:', params)
-  }
-
-  // 表单配置项
-  const formItems: SearchFormItem[] = [
-    {
-      label: '产品名称',
-      prop: 'name',
-      type: 'input',
-      config: {
-        clearable: true
+  const {
+    columns,
+    columnChecks,
+    data,
+    loading,
+    pagination,
+    getData,
+    searchParams,
+    resetSearchParams,
+    handleSizeChange,
+    handleCurrentChange,
+    refreshData
+  } = useTable({
+    core: {
+      apiFn: fetchProductList,
+      apiParams: {
+        current: 1,
+        size: 10,
+        ...searchForm.value
       },
-      onChange: handleFormChange
+      columnsFactory: () => [
+        { type: 'selection' }, // 勾选列
+        { type: 'index', width: 60, label: '序号' }, // 序号
+        {
+          prop: 'id-name',
+          label: '名称/ID',
+          minWidth: width.value < 500 ? 220 : '',
+          formatter: (row: any) => {
+            return h('div', { class: 'product', style: 'display: flex; align-items: center' }, [
+              h('div', {}, [
+                h('p', { class: 'product-name' }, row.name),
+                h('p', { class: 'email' }, row.productId)
+              ])
+            ])
+          }
+        },
+        {
+          prop: 'enable',
+          label: '启用状态',
+          formatter: (row: any) => {
+            return h(ElSwitch, {
+              modelValue: row.enable,
+              onclick: () => updateToEnable(row.productId, !row.enable)
+            })
+          }
+        },
+        {
+          prop: 'createdAt',
+          label: '创建信息',
+          formatter: (row: any) => {
+            return h('div', { class: 'product', style: 'display: flex; align-items: center' }, [
+              h('div', {}, [h('p', row.creator), h('p', timestampToTime(row.createdAt, false))])
+            ])
+          },
+          sortable: true
+        },
+        {
+          prop: 'updatedAt',
+          label: '更新信息',
+          formatter: (row: any) => {
+            return h('div', { class: 'product', style: 'display: flex; align-items: center' }, [
+              h('div', {}, [h('p', row.editor), h('p', timestampToTime(row.updatedAt, false))])
+            ])
+          },
+          sortable: true
+        },
+        {
+          prop: 'operation',
+          label: '操作',
+          width: 180,
+          fixed: 'right', // 固定列
+          formatter: (row: any) => {
+            return h('div', [
+              h(ArtButtonTable, {
+                type: 'detail',
+                onClick: () => goToProductDetail(row.productId)
+              }),
+              h(ArtButtonTable, {
+                type: 'edit',
+                onClick: () => showDialog('edit', row)
+              }),
+              h(ArtButtonTable, {
+                type: 'delete',
+                onClick: () => deleteProduct(row.productId)
+              })
+            ])
+          }
+        }
+      ]
     }
-  ]
+  })
 
-  // 获取标签类型
-  const getTagType = (enable: boolean) => {
-    if (enable) {
-      return 'success'
-    }
-    return 'info'
+  /**
+   * 搜索处理
+   * @param params 参数
+   */
+  const handleSearch = (params: Record<string, any>) => {
+    console.log(params)
+    // 搜索参数赋值
+    Object.assign(searchParams, params)
+    getData()
   }
 
-  // 构建标签文本
-  const buildTagText = (enable: boolean) => {
-    let text = '停用'
-    if (enable) {
-      text = '启用'
-    }
-    return text
+  /**
+   * 跳转到产品详情
+   */
+  const goToProductDetail = (productId: string) => {
+    router.push({
+      path: '/device/product/detail',
+      query: {
+        id: productId
+      }
+    })
   }
 
-  // 显示对话框
-  const showDialog = (type: string, row?: any) => {
-    dialogVisible.value = true
+  /**
+   * 显示产品弹窗
+   */
+  const showDialog = (type: 'add' | 'edit', row?: any): void => {
+    console.log('打开弹窗:', { type, row })
     dialogType.value = type
-
-    // 重置表单验证状态
-    if (formRef.value) {
-      formRef.value.resetFields()
-    }
-
-    if (type === 'edit' && row) {
-      formData.productId = row.productId
-      formData.name = row.name
-      formData.description = row.description
-    } else {
-      formData.name = ''
-      formData.description = ''
-    }
+    currentProductData.value = row || {}
+    nextTick(() => {
+      dialogVisible.value = true
+    })
   }
 
-  // 删除产品
-  const deleteProduct = (productId: string) => {
-    ElMessageBox.confirm('确定要删除该产品吗？', '删除产品', {
+  /**
+   * 删除产品
+   */
+  const deleteProduct = (row: any): void => {
+    console.log('删除产品:', row)
+    ElMessageBox.confirm(`确定要删除该产品吗？`, '删除产品', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'error'
     }).then(() => {
-      DeviceService.deleteProduct([productId])
+      DeviceService.deleteProduct([row.productId])
         .then(() => {
-          getProductList()
+          refreshData()
           ElMessage.success('删除成功')
         })
         .catch((error) => {
@@ -194,198 +232,16 @@
     })
   }
 
-  // 跳转到产品详情
-  const goToProductDetail = (productId: string) => {
-    router.push({
-      path: '/device/product/detail',
-      query: { id: productId }
-    })
-  }
-
-  // 动态列配置
-  const { columnChecks, columns } = useCheckedColumns(() => [
-    // { type: 'selection' }, // 勾选列
-    // { type: 'expand', label: '展开', width: 80 }, // 展开列
-    // { type: 'index', label: '序号', width: 80 }, // 序号列
-    {
-      prop: 'id-name',
-      label: '名称/ID',
-      minWidth: width.value < 500 ? 220 : '',
-      formatter: (row: any) => {
-        return h('div', { class: 'product', style: 'display: flex; align-items: center' }, [
-          h('div', {}, [
-            h('p', { class: 'product-name' }, row.name),
-            h('p', { class: 'email' }, row.productId)
-          ])
-        ])
-      }
-    },
-    {
-      prop: 'enable',
-      label: '启用',
-      formatter: (row: any) => {
-        return h(ElSwitch, {
-          modelValue: row.enable,
-          onclick: () => updateToEnable(row.productId, !row.enable)
-        })
-      }
-    },
-    {
-      prop: 'createdAt',
-      label: '创建',
-      formatter: (row: any) => {
-        return h('div', { class: 'product', style: 'display: flex; align-items: center' }, [
-          h('div', {}, [h('p', row.creator), h('p', timestampToTime(row.createdAt, false))])
-        ])
-      },
-      sortable: true
-    },
-    {
-      prop: 'updatedAt',
-      label: '更新',
-      formatter: (row: any) => {
-        return h('div', { class: 'product', style: 'display: flex; align-items: center' }, [
-          h('div', {}, [h('p', row.editor), h('p', timestampToTime(row.updatedAt, false))])
-        ])
-      },
-      sortable: true
-    },
-    {
-      prop: 'operation',
-      label: '操作',
-      width: 180,
-      // fixed: 'right', // 固定在右侧
-      // disabled: true,
-      formatter: (row: any) => {
-        return h('div', [
-          h(ArtButtonTable, {
-            type: 'detail',
-            onClick: () => goToProductDetail(row.productId)
-          }),
-          h(ArtButtonTable, {
-            type: 'edit',
-            onClick: () => showDialog('edit', row)
-          }),
-          h(ArtButtonTable, {
-            type: 'delete',
-            onClick: () => deleteProduct(row.productId)
-          })
-        ])
-      }
-    }
-  ])
-
-  // 表单实例
-  const formRef = ref<FormInstance>()
-
-  // 表单数据
-  const formData = reactive({
-    productId: '',
-    name: '',
-    description: ''
-  })
-
-  onMounted(() => {
-    getProductList()
-  })
-
-  // 获取产品列表数据
-  const getProductList = async () => {
-    loading.value = true
-    try {
-      const { currentPage, pageSize } = pagination
-
-      const getProductsResp = await DeviceService.getProducts({
-        name: formFilters.name,
-        pageNo: currentPage,
-        perPage: pageSize
-      })
-      tableData.value = getProductsResp.products == null ? [] : getProductsResp.products
-      const pageRes = getProductsResp.pageResult
-      // 更新分页信息
-      Object.assign(pagination, {
-        currentPage: pageRes.currentPageNo,
-        pageSize: pageSize,
-        total: pageRes.totalCount
-      })
-    } catch (error) {
-      console.error('获取产品列表失败:', error)
-    } finally {
-      loading.value = false
-    }
-  }
-
-  const handleRefresh = () => {
-    getProductList()
-  }
-
-  // 处理表格行选择变化
-  const handleSelectionChange = (selection: any[]) => {
-    selectedRows.value = selection
-  }
-
-  // 表单验证规则
-  const rules = reactive<FormRules>({
-    name: [
-      { required: true, message: '请输入产品名', trigger: 'blur' },
-      { min: 2, max: 20, message: '长度在 2 到 20 个字符', trigger: 'blur' }
-    ]
-  })
-
-  // 提交表单
-  const handleSubmit = async () => {
-    if (!formRef.value) return
-
-    await formRef.value.validate((valid) => {
-      if (valid) {
-        if (dialogType.value === 'add') {
-          createProduct()
-        } else {
-          updateProduct()
-        }
-        ElMessage.success(dialogType.value === 'add' ? '添加成功' : '更新成功')
-        dialogVisible.value = false
-      }
-    })
-  }
-
-  const createProduct = () => {
-    DeviceService.createProduct({
-      name: formData.name,
-      description: formData.description
-    })
-      .then(() => {
-        getProductList()
-      })
-      .catch((error) => {
-        console.error('添加产品失败:', error)
-        ElMessage.error('添加产品失败')
-      })
-  }
-
-  const updateProduct = () => {
-    console.log('to update', formData)
-    DeviceService.updateProduct({
-      productId: formData.productId,
-      name: formData.name,
-      description: formData.description
-    })
-      .then(() => {
-        getProductList()
-      })
-      .catch((error) => {
-        console.error('更新产品失败:', error)
-        ElMessage.error('更新产品失败')
-      })
-  }
-
+  /**
+   * 更新产品启用状态
+   */
   const updateToEnable = (productId: string, enabled: boolean) => {
     DeviceService.updateProductStatus({
       productId: productId,
       toEnable: enabled
     })
       .then(() => {
-        getProductList()
+        refreshData()
       })
       .catch((error) => {
         console.error('更新产品状态失败:', error)
@@ -393,15 +249,25 @@
       })
   }
 
-  // 处理表格分页变化
-  const handleSizeChange = (newPageSize: number) => {
-    pagination.pageSize = newPageSize
-    getProductList()
+  /**
+   * 处理弹窗提交事件
+   */
+  const handleDialogSubmit = async () => {
+    try {
+      dialogVisible.value = false
+      currentProductData.value = {}
+      refreshData()
+    } catch (error) {
+      console.error('提交失败:', error)
+    }
   }
 
-  const handleCurrentChange = (newCurrentPage: number) => {
-    pagination.currentPage = newCurrentPage
-    getProductList()
+  /**
+   * 处理表格行选择变化
+   */
+  const handleSelectionChange = (selection: any[]): void => {
+    selectedRows.value = selection
+    console.log('选中行数据:', selectedRows.value)
   }
 </script>
 

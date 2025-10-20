@@ -1,27 +1,28 @@
 <template>
-  <ArtTableFullScreen>
-    <div class="model-page" id="table-full-screen">
-      <!-- 搜索栏 -->
-      <ArtSearchBar v-model:filter="formFilters" :items="formItems" @reset="handleReset" @search="handleSearch">
-      </ArtSearchBar>
+  <div class="model-page art-full-height">
+    <!-- 搜索栏 -->
+    <ArtSearchBar v-model:filter="searchForm" :items="formItems" @reset="resetSearchParams" @search="handleSearch">
+    </ArtSearchBar>
 
-      <ElCard shadow="never" class="art-table-card">
-        <!-- 表格头部 -->
-        <ArtTableHeader v-model:columns="columnChecks" @refresh="handleRefresh">
-          <template #left>
-            <ElButton @click="showDialog('add')">新增</ElButton>
-          </template>
-        </ArtTableHeader>
+    <ElCard shadow="never" class="art-table-card">
+      <!-- 表格头部 -->
+      <ArtTableHeader v-model:columns="columnChecks" :loading="loading" @refresh="refreshData">
+        <template #left>
+          <ElButton @click="showDialog('add')">新增</ElButton>
+        </template>
+      </ArtTableHeader>
 
-        <!-- 表格 -->
-        <ArtTable ref="tableRef" row-key="id" :loading="loading" :data="tableData" :currentPage="pagination.currentPage"
-          :pageSize="pagination.pageSize" :total="pagination.total" :marginTop="10"
-          @selection-change="handleSelectionChange" @size-change="handleSizeChange"
-          @current-change="handleCurrentChange">
-          <template #default>
-            <ElTableColumn v-for="col in columns" :key="col.prop || col.type" v-bind="col" />
-          </template>
-        </ArtTable>
+      <!-- 表格 -->
+      <ArtTable
+        :loading="loading"
+        :data="data"
+        :columns="columns"
+        :pagination="pagination"
+        @selection-change="handleSelectionChange"
+        @pagination:size-change="handleSizeChange"
+        @pagination:current-change="handleCurrentChange"
+      >
+      </ArtTable>
 
         <ElDialog v-model="dialogVisible" :title="dialogTitle" width="55%" align-center>
           <ElForm class="func-model-form" ref="formRef" :model="formData" :rules="rules" :inline="true"
@@ -56,10 +57,9 @@
               <ElButton v-if="!formDisabled" type="primary" @click="handleSubmit">提交</ElButton>
             </div>
           </template>
-        </ElDialog>
-      </ElCard>
-    </div>
-  </ArtTableFullScreen>
+      </ElDialog>
+    </ElCard>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -67,12 +67,11 @@ import { h } from 'vue'
 import { ElDialog, FormInstance, ElTag } from 'element-plus'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import type { FormRules } from 'element-plus'
-import { useCheckedColumns } from '@/composables/useCheckedColumns'
+import { useTable } from '@/composables/useTable'
 import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
 import { SearchChangeParams, SearchFormItem } from '@/types'
 import { timestampToTime } from '@/utils/dataprocess/format'
 import { useWindowSize } from '@vueuse/core'
-import { defineOptions } from 'vue'
 import { DeviceService } from '@/api/deviceApi'
 import PropertyFormItem from './property/index.vue'
 import EventFormItem from './event/index.vue'
@@ -91,45 +90,15 @@ const dialogType = ref('add')
 const dialogTitle = ref('')
 const formDisabled = ref(false)
 const dialogVisible = ref(false)
-const loading = ref(false)
-
-// 定义表单搜索初始值
-const initialSearchState = {
-  name: '',
-  modelType: ''
-}
-
-// 响应式表单数据
-const formFilters = reactive({ ...initialSearchState })
-
-const pagination = reactive({
-  currentPage: 1,
-  pageSize: 10,
-  total: 0
-})
-
-// 表格数据
-const tableData = ref<any[]>([])
-
-// 表格实例引用
-const tableRef = ref()
 
 // 选中的行数据
 const selectedRows = ref<any[]>([])
 
-// 重置表单
-const handleReset = () => {
-  Object.assign(formFilters, { ...initialSearchState })
-  pagination.currentPage = 1 // 重置到第一页
-  getFuncModelList()
-}
-
-// 搜索处理
-const handleSearch = () => {
-  console.log('搜索参数:', formFilters)
-  pagination.currentPage = 1 // 搜索时重置到第一页
-  getFuncModelList()
-}
+// 搜索表单
+const searchForm = ref({
+  name: '',
+  modelType: ''
+})
 
 // 表单项变更处理
 const handleFormChange = (params: SearchChangeParams): void => {
@@ -165,6 +134,25 @@ const formItems: SearchFormItem[] = [
 
 const dataTypeOptions = ref(['text', 'number', 'bool', 'enum', 'array', 'object'])
 
+// API 请求函数适配器
+const fetchFuncModelList = async (params: any) => {
+  const response = await DeviceService.getFuncModels({
+    pageNo: params.current || 1,
+    perPage: params.size || 10,
+    productId: props.productId,
+    modelIds: [],
+    name: params.name || '',
+    modelType: params.modelType || ''
+  })
+  
+  return {
+    records: response.funcModels || [],
+    current: response.pageResult.currentPageNo,
+    size: params.size || 10,
+    total: response.pageResult.totalCount
+  }
+}
+
 // 获取标签类型
 const getModelTypeTagType = (t: string) => {
   switch (t) {
@@ -192,49 +180,6 @@ const buildModelTypeText = (t: string) => {
   return text
 }
 
-// 显示对话框
-const showDialog = (type: string, row?: any) => {
-  dialogVisible.value = true
-  dialogType.value = type
-  formDisabled.value = false
-  // 重置表单验证状态
-  if (formRef.value) {
-    formRef.value.resetFields()
-    resetFormData() // 重置表单数据
-  }
-  if (type === 'edit' && row) {
-    dialogTitle.value = '编辑功能模型'
-    Object.assign(formData, { ...row }) // 复制对象，避免引用导致表单数据不一致
-  } else if (type === 'detail' && row) {
-    dialogTitle.value = '功能模型详情'
-    formDisabled.value = true
-    Object.assign(formData, { ...row }) // 复制对象，避免引用导致表单数据不一致
-  } else {
-    dialogTitle.value = '新增功能模型'
-    resetFormData() // 重置表单数据
-    formData.type = 'Property' // 默认类型为属性
-  }
-}
-
-// 删除功能模型
-const deleteFuncModel = (modelId: string) => {
-  ElMessageBox.confirm('确定要删除该功能模型吗？', '删除功能模型', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'error'
-  }).then(() => {
-    DeviceService.deleteFuncModel([modelId])
-      .then(() => {
-        getFuncModelList()
-        ElMessage.success('删除成功')
-      })
-      .catch((error) => {
-        console.error('删除功能模型失败:', error)
-        ElMessage.error('删除功能模型失败')
-      })
-  })
-}
-
 const copy = (text: string) => {
   if (!text) return
 
@@ -248,129 +193,203 @@ const copy = (text: string) => {
   ElMessage.success(`已复制`)
 }
 
-// 动态列配置
-const { columnChecks, columns } = useCheckedColumns(() => [
-  {
-    prop: 'id-name',
-    label: '名称/ID',
-    minWidth: width.value < 500 ? 220 : '',
-    formatter: (row: any) => {
-      return h('div', { class: 'func-model', style: 'display: flex; align-items: center' }, [
-        h('div', {}, [
-          h('p', { class: 'model-name' }, row.name),
-          h('p', { class: 'email' }, row.funcModelId)
-        ])
-      ])
-    }
-  },
-  {
-    prop: 'key',
-    label: 'Key',
-    minWidth: width.value < 500 ? 220 : '',
-    formatter: (row: any) => {
-      return h('div', { class: 'func-model', style: 'display: flex; align-items: center' }, [
-        h('div', {}, [
-          h('span', { class: 'model-key' }, row.key),
-          h(ArtButtonTable, {
-            onClick: () => copy(row.key),
-            icon: '&#xe624;',
-            buttonBgColor: 'transparent'
-          })
-        ])
-      ])
-    }
-  },
-  {
-    prop: 'type',
-    label: '类型',
-    minWidth: width.value < 500 ? 220 : '',
-    formatter: (row: any) => {
-      return h(ElTag, { type: getModelTypeTagType(row.type) }, () => buildModelTypeText(row.type))
-    }
-  },
-  {
-    prop: 'data-type',
-    label: '数据类型',
-    minWidth: width.value < 500 ? 220 : '',
-    formatter: (row: any) => {
-      return h('div', { class: 'func-model', style: 'display: flex; align-items: center' }, [
-        h(
-          'p',
-          {},
-          (function () {
-            switch (row.type) {
-              case 'Property':
-                return row.dataType
-              case 'Event':
-                return row.output
-                  .map((item: any) => {
-                    return item.dataType
-                  })
-                  .join(',')
-              case 'Service':
-                return (
-                  row.input
-                    .map((item: any) => {
-                      return item.dataType
-                    })
-                    .join(',') +
-                  ' -> ' +
-                  row.output
-                    .map((item: any) => {
-                      return item.dataType
-                    })
-                    .join(',')
-                )
-              default:
-                return '-'
-            }
-          })()
-        )
-      ])
-    }
-  },
-  {
-    prop: 'createdAt',
-    label: '创建',
-    formatter: (row: any) => {
-      return h('div', { class: 'func-model', style: 'display: flex; align-items: center' }, [
-        h('div', {}, [h('p', row.creator), h('p', timestampToTime(row.createdAt, false))])
-      ])
+const {
+  columns,
+  columnChecks,
+  data,
+  loading,
+  pagination,
+  getData,
+  searchParams,
+  resetSearchParams,
+  handleSizeChange,
+  handleCurrentChange,
+  refreshData
+} = useTable({
+  core: {
+    apiFn: fetchFuncModelList,
+    apiParams: {
+      current: 1,
+      size: 10,
+      ...searchForm.value
     },
-    sortable: true
-  },
-  {
-    prop: 'updatedAt',
-    label: '更新',
-    formatter: (row: any) => {
-      return h('div', { class: 'func-model', style: 'display: flex; align-items: center' }, [
-        h('div', {}, [h('p', row.editor), h('p', timestampToTime(row.updatedAt, false))])
-      ])
-    },
-    sortable: true
-  },
-  {
-    prop: 'operation',
-    label: '操作',
-    width: 180,
-    formatter: (row: any) => {
-      return h('div', [
-        h(ArtButtonTable, {
-          type: 'edit',
-          onClick: () => showDialog('edit', row)
-        }),
-        h(ArtButtonTable, {
-          type: 'delete',
-          onClick: () => deleteFuncModel(row.funcModelId)
-        }),
-        h(ArtButtonTable, {
-          type: 'detail',
-          onClick: () => showDialog('detail', row)
-        })
-      ])
-    }
+    columnsFactory: () => [
+      {
+        prop: 'id-name',
+        label: '名称/ID',
+        minWidth: width.value < 500 ? 220 : '',
+        formatter: (row: any) => {
+          return h('div', { class: 'func-model', style: 'display: flex; align-items: center' }, [
+            h('div', {}, [
+              h('p', { class: 'model-name' }, row.name),
+              h('p', { class: 'email' }, row.funcModelId)
+            ])
+          ])
+        }
+      },
+      {
+        prop: 'key',
+        label: 'Key',
+        minWidth: width.value < 500 ? 220 : '',
+        formatter: (row: any) => {
+          return h('div', { class: 'func-model', style: 'display: flex; align-items: center' }, [
+            h('div', {}, [
+              h('span', { class: 'model-key' }, row.key),
+              h(ArtButtonTable, {
+                onClick: () => copy(row.key),
+                icon: '&#xe624;',
+                buttonBgColor: 'transparent'
+              })
+            ])
+          ])
+        }
+      },
+      {
+        prop: 'type',
+        label: '类型',
+        minWidth: width.value < 500 ? 220 : '',
+        formatter: (row: any) => {
+          return h(ElTag, { type: getModelTypeTagType(row.type) }, () => buildModelTypeText(row.type))
+        }
+      },
+      {
+        prop: 'data-type',
+        label: '数据类型',
+        minWidth: width.value < 500 ? 220 : '',
+        formatter: (row: any) => {
+          return h('div', { class: 'func-model', style: 'display: flex; align-items: center' }, [
+            h(
+              'p',
+              {},
+              (function () {
+                switch (row.type) {
+                  case 'Property':
+                    return row.dataType
+                  case 'Event':
+                    return row.output
+                      .map((item: any) => {
+                        return item.dataType
+                      })
+                      .join(',')
+                  case 'Service':
+                    return (
+                      row.input
+                        .map((item: any) => {
+                          return item.dataType
+                        })
+                        .join(',') +
+                      ' -> ' +
+                      row.output
+                        .map((item: any) => {
+                          return item.dataType
+                        })
+                        .join(',')
+                    )
+                  default:
+                    return '-'
+                }
+              })()
+            )
+          ])
+        }
+      },
+      {
+        prop: 'createdAt',
+        label: '创建',
+        formatter: (row: any) => {
+          return h('div', { class: 'func-model', style: 'display: flex; align-items: center' }, [
+            h('div', {}, [h('p', row.creator), h('p', timestampToTime(row.createdAt, false))])
+          ])
+        },
+        sortable: true
+      },
+      {
+        prop: 'updatedAt',
+        label: '更新',
+        formatter: (row: any) => {
+          return h('div', { class: 'func-model', style: 'display: flex; align-items: center' }, [
+            h('div', {}, [h('p', row.editor), h('p', timestampToTime(row.updatedAt, false))])
+          ])
+        },
+        sortable: true
+      },
+      {
+        prop: 'operation',
+        label: '操作',
+        width: 180,
+        formatter: (row: any) => {
+          return h('div', [
+            h(ArtButtonTable, {
+              type: 'edit',
+              onClick: () => showDialog('edit', row)
+            }),
+            h(ArtButtonTable, {
+              type: 'delete',
+              onClick: () => deleteFuncModel(row.funcModelId)
+            }),
+            h(ArtButtonTable, {
+              type: 'detail',
+              onClick: () => showDialog('detail', row)
+            })
+          ])
+        }
+      }
+    ]
   }
-])
+})
+
+// 搜索处理
+const handleSearch = () => {
+  searchParams.value = { ...searchForm.value }
+  getData()
+}
+
+// 显示对话框
+const showDialog = (type: string, row?: any) => {
+  dialogVisible.value = true
+  dialogType.value = type
+  formDisabled.value = false
+  if (formRef.value) {
+    formRef.value.resetFields()
+    resetFormData()
+  }
+  if (type === 'edit' && row) {
+    dialogTitle.value = '编辑功能模型'
+    Object.assign(formData, { ...row })
+  } else if (type === 'detail' && row) {
+    dialogTitle.value = '功能模型详情'
+    formDisabled.value = true
+    Object.assign(formData, { ...row })
+  } else {
+    dialogTitle.value = '新增功能模型'
+    resetFormData()
+    formData.type = 'Property'
+  }
+}
+
+// 删除功能模型
+const deleteFuncModel = (modelId: string) => {
+  ElMessageBox.confirm('确定要删除该功能模型吗？', '删除功能模型', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'error'
+  }).then(() => {
+    DeviceService.deleteFuncModel([modelId])
+      .then(() => {
+        refreshData()
+        ElMessage.success('删除成功')
+      })
+      .catch((error) => {
+        console.error('删除功能模型失败:', error)
+        ElMessage.error('删除功能模型失败')
+      })
+  })
+}
+
+// 处理表格行选择变化
+const handleSelectionChange = (selection: any[]) => {
+  selectedRows.value = selection
+}
 
 // 表单实例
 const formRef = ref<FormInstance>()
@@ -416,12 +435,10 @@ const resetFormData = () => {
 }
 
 const handlerTypeChange = () => {
-  // 保留部分数据
   let name = formData.name
   let key = formData.key
   let type = formData.type
   let desc = formData.description
-  // 重置表单数据
   initFormData.input = []
   initFormData.output = []
   Object.assign(formData, { ...initFormData })
@@ -431,44 +448,6 @@ const handlerTypeChange = () => {
   formData.description = desc
 
   console.log(initFormData, formData)
-}
-
-// 获取功能模型列表数据
-const getFuncModelList = async () => {
-  loading.value = true
-  try {
-    const { currentPage, pageSize } = pagination
-
-    const getFuncModelsResp = await DeviceService.getFuncModels({
-      pageNo: currentPage,
-      perPage: pageSize,
-      productId: props.productId, // 根据产品ID过滤功能模型
-      modelIds: [],
-      name: formFilters.name,
-      modelType: formFilters.modelType
-    })
-    tableData.value = getFuncModelsResp.funcModels == null ? [] : getFuncModelsResp.funcModels
-    const pageRes = getFuncModelsResp.pageResult
-    // 更新分页信息
-    Object.assign(pagination, {
-      currentPage: pageRes.currentPageNo,
-      pageSize: pageSize,
-      total: pageRes.totalCount
-    })
-  } catch (error) {
-    console.error('获取功能模型列表失败:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
-const handleRefresh = () => {
-  getFuncModelList()
-}
-
-// 处理表格行选择变化
-const handleSelectionChange = (selection: any[]) => {
-  selectedRows.value = selection
 }
 
 // 表单验证规则
@@ -501,7 +480,6 @@ const handleSubmit = async () => {
 }
 
 const createFuncmodel = () => {
-  // 添加产品ID到创建请求中
   const createParams = {
     ...formData,
     productId: props.productId
@@ -509,7 +487,7 @@ const createFuncmodel = () => {
 
   DeviceService.createFuncModel(createParams)
     .then(() => {
-      getFuncModelList()
+      refreshData()
       ElMessage.success('添加成功')
       dialogVisible.value = false
     })
@@ -523,7 +501,7 @@ const updateFuncModel = () => {
   console.log('to update', formData)
   DeviceService.updateFuncModel({ ...formData, _: 1 })
     .then(() => {
-      getFuncModelList()
+      refreshData()
       ElMessage.success('更新成功')
       dialogVisible.value = false
     })
@@ -532,21 +510,6 @@ const updateFuncModel = () => {
       ElMessage.error('更新功能模型失败')
     })
 }
-
-// 处理表格分页变化
-const handleSizeChange = (newPageSize: number) => {
-  pagination.pageSize = newPageSize
-  getFuncModelList()
-}
-
-const handleCurrentChange = (newCurrentPage: number) => {
-  pagination.currentPage = newCurrentPage
-  getFuncModelList()
-}
-
-onMounted(() => {
-  getFuncModelList()
-})
 </script>
 
 <style lang="scss" scoped>

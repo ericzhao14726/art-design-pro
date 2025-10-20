@@ -67,7 +67,7 @@
   import { ElDialog, FormInstance, ElTag, ElSwitch } from 'element-plus'
   import { ElMessageBox, ElMessage } from 'element-plus'
   import type { FormRules } from 'element-plus'
-  import { useCheckedColumns } from '@/composables/useCheckedColumns'
+  import { useTableColumns } from '@/composables/useTableColumns'
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
   import { SearchChangeParams, SearchFormItem } from '@/types'
   import { DeviceService } from '@/api/deviceApi'
