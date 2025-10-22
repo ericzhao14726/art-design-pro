@@ -1,7 +1,11 @@
 <template>
   <div class="device-page art-full-height">
     <!-- 搜索栏 -->
-    <DeviceSearch v-model="searchForm" @search="handleSearch" @reset="resetSearchParams"></DeviceSearch>
+    <DeviceSearch
+      v-model="searchForm"
+      @search="handleSearch"
+      @reset="resetSearchParams"
+    ></DeviceSearch>
 
     <ElCard class="art-table-card" shadow="never">
       <!-- 表格头部 -->
@@ -74,7 +78,7 @@
       perPage: params.size || 10,
       productId: params.productId || ''
     })
-    
+
     return {
       records: response.devices || [],
       current: response.pageResult.currentPageNo,
@@ -151,7 +155,7 @@
             return h('div', {}, [
               h(ElTag, { type: getOnlineTagType(row.isOnline) }, () =>
                 buildOnlineTagText(row.isOnline)
-              ),
+              )
             ])
           }
         },

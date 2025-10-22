@@ -29,9 +29,6 @@ declare namespace Api {
       total: number
     }
 
-    /** 启用状态 */
-    type EnableStatus = '1' | '2'
-
     interface PageByNoRequest {
       pageNo: number
       perPage: number
@@ -80,53 +77,6 @@ declare namespace Api {
     }
   }
 
-  /** 系统管理类型 */
-  namespace SystemManage {
-    /** 用户列表 */
-    type UserList = Api.Common.PaginatedResponse<UserListItem>
-
-    /** 用户列表项 */
-    interface UserListItem {
-      id: number
-      avatar: string
-      status: string
-      userName: string
-      userGender: string
-      nickName: string
-      userPhone: string
-      userEmail: string
-      userRoles: string[]
-      createBy: string
-      createTime: string
-      updateBy: string
-      updateTime: string
-    }
-
-    /** 用户搜索参数 */
-    type UserSearchParams = Partial<
-      Pick<UserListItem, 'id' | 'userName' | 'userGender' | 'userPhone' | 'userEmail' | 'status'> &
-        Api.Common.CommonSearchParams
-    >
-
-    /** 角色列表 */
-    type RoleList = Api.Common.PaginatedResponse<RoleListItem>
-
-    /** 角色列表项 */
-    interface RoleListItem {
-      roleId: number
-      roleName: string
-      roleCode: string
-      description: string
-      enabled: boolean
-      createTime: string
-    }
-
-    /** 角色搜索参数 */
-    type RoleSearchParams = Partial<
-      Pick<RoleListItem, 'roleId' | 'roleName' | 'roleCode' | 'description' | 'enabled'> &
-        Api.Common.CommonSearchParams
-    >
-  }
   /** 设备管理 */
   namespace Device {
     interface Product {
@@ -336,6 +286,74 @@ declare namespace Api {
     }
     interface UpdateFuncModelRequest extends FuncModel {
       _: any // 占位符，避免接口返回空对象
+    }
+  }
+
+  /** 系统管理 */
+  namespace SystemManage {
+    /** 用户列表项 */
+    interface AccountListItem {
+      uid: string
+      name: string
+      nickName: string
+      email: string
+      mobile: string
+      avatar?: string
+      status: number
+      createdAt: number
+      updatedAt: number
+      creator: string
+      editor: string
+    }
+
+    /** 创建账户请求 */
+    interface CreateAccountRequest {
+      name: string
+      nickName: string
+      email: string
+      mobile: string
+      password: string
+      avatar?: string
+    }
+
+    /** 创建账户响应 */
+    interface CreateAccountResponse {
+      uid: string
+    }
+
+    /** 修改账户请求 */
+    interface ModifyAccountRequest {
+      uid: string
+      name: string
+      nickName: string
+      email: string
+      mobile: string
+      avatar?: string
+    }
+
+    /** 删除账户请求 */
+    interface DeleteAccountRequest {
+      uids: string[]
+    }
+
+    /** 获取账户列表请求 */
+    interface GetAccountsRequest extends Common.PageByNoRequest {
+      name?: string
+      mobile?: string
+      email?: string
+      status?: number
+    }
+
+    /** 获取账户列表响应 */
+    interface GetAccountsResponse {
+      accounts: AccountListItem[]
+      pageResult: Common.PageByNoResult
+    }
+
+    /** 修改账户状态请求 */
+    interface ModifyAccountStatusRequest {
+      uid: string
+      toEnable: boolean
     }
   }
 }

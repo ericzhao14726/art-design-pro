@@ -6,7 +6,6 @@ import { useUserStore } from '@/store/modules/user'
 import { useMenuStore } from '@/store/modules/menu'
 import { setWorktab } from '@/utils/navigation'
 import { setPageTitle } from '../utils/utils'
-import { fetchGetMenuList } from '@/api/system-manage'
 import { registerDynamicRoutes } from '../utils/registerRoutes'
 import { AppRouteRecord } from '@/types/router'
 import { RoutesAlias } from '../routesAlias'
@@ -235,9 +234,10 @@ async function processFrontendMenu(router: Router): Promise<void> {
  * 处理后端控制模式的菜单逻辑
  */
 async function processBackendMenu(router: Router): Promise<void> {
-  const list = await fetchGetMenuList()
-  const menuList = list.map((route) => menuDataToRouter(route))
-  await registerAndStoreMenu(router, menuList)
+  console.debug(router)
+  // const list = await fetchGetMenuList()
+  // const menuList = list.map((route) => menuDataToRouter(route))
+  // await registerAndStoreMenu(router, menuList)
 }
 
 /**

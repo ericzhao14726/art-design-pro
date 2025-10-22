@@ -26,11 +26,7 @@
       </template>
     </el-dialog>
     <div v-if="showReconnect" class="reconnect-container">
-      <el-button
-        type="primary"
-        @click="
-          showReconnect = false; dialogVisible = true
-        "
+      <el-button type="primary" @click="((showReconnect = false), (dialogVisible = true))"
         >重新连接</el-button
       >
     </div>
@@ -44,12 +40,18 @@
   import { FitAddon } from 'xterm-addon-fit'
   import 'xterm/css/xterm.css'
   import { ElMessage } from 'element-plus'
+  import { DeviceService } from '@/api/deviceApi'
 
   const props = defineProps({
-    wsUrl: {
+    productId: {
       type: String,
       required: true,
-      default: 'ws://localhost:3996/console/device/terminal/dev-g3341c9j'
+      default: ''
+    },
+    deviceId: {
+      type: String,
+      required: true,
+      default: ''
     }
   })
 
@@ -60,6 +62,8 @@
   const dialogVisible = ref(true)
   const showReconnect = ref(false)
   const loginForm = ref({
+    productId: props.productId,
+    deviceId: props.deviceId,
     port: '',
     username: '',
     password: ''
@@ -100,40 +104,45 @@
   }
 
   // WebSocket处理
-  const setupWebSocket = () => {
-    websocket = new WebSocket(props.wsUrl)
+  const setupWebSocket = async () => {
+    try {
+      websocket = DeviceService.createWebSocketTerminal()
+      websocket.onopen = () => {
+        // 发送登录信息作为第一条消息
+        websocket.send(
+          JSON.stringify({
+            type: 'login',
+            deviceId: loginForm.value.deviceId,
+            port: loginForm.value.port,
+            username: loginForm.value.username,
+            password: loginForm.value.password
+          })
+        )
+        term.write('Terminal connecting!\\r\\n')
+        dialogVisible.value = false
+        showReconnect.value = false
+      }
 
-    websocket.onopen = () => {
-      // 发送登录信息作为第一条消息
-      websocket.send(
-        JSON.stringify({
-          type: 'login',
-          port: loginForm.value.port,
-          username: loginForm.value.username,
-          password: loginForm.value.password
-        })
-      )
-      term.write('Terminal connected!\r\n')
-      dialogVisible.value = false
-      showReconnect.value = false
-    }
+      websocket.onmessage = (event) => {
+        let data = event.data
+        console.log('Received message:', data)
+        term.write(data)
+      }
 
-    websocket.onmessage = (event) => {
-      let data = event.data
-      console.log('Received message:', data)
-      term.write(data)
-    }
+      websocket.onclose = () => {
+        term.write('\\r\\nConnection closed')
+        ElMessage.error('连接失败，请检查登录信息并重试')
+        showReconnect.value = true
+      }
 
-    websocket.onclose = () => {
-      term.write('\r\nConnection closed')
-      ElMessage.error('连接失败，请检查登录信息并重试')
-      showReconnect.value = true
-    }
-
-    websocket.onerror = (error) => {
-      console.error('WebSocket error:', error)
-      ElMessage.error('连接错误，请检查网络或服务器状态')
-      showReconnect.value = true
+      websocket.onerror = (error) => {
+        console.error('WebSocket error:', error)
+        ElMessage.error('连接错误，请检查网络或服务器状态')
+        showReconnect.value = true
+      }
+    } catch (error) {
+      console.error('Failed to create web terminal:', error)
+      ElMessage.error('创建终端连接失败')
     }
   }
 

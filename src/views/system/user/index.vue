@@ -14,6 +14,14 @@
         <template #left>
           <ElSpace wrap>
             <ElButton @click="showDialog('add')" v-ripple>新增用户</ElButton>
+            <ElButton
+              v-if="selectedRows.length > 0"
+              @click="batchDeleteUsers"
+              type="danger"
+              v-ripple
+            >
+              批量删除
+            </ElButton>
           </ElSpace>
         </template>
       </ArtTableHeader>
@@ -42,20 +50,21 @@
 </template>
 
 <script setup lang="ts">
-  import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
-  import { ACCOUNT_TABLE_DATA } from '@/mock/temp/formData'
+  import { h, nextTick } from 'vue'
+  import { ElTag, ElMessageBox, ElMessage, ElSwitch } from 'element-plus'
   import { useTable } from '@/composables/useTable'
-  import { fetchGetUserList } from '@/api/system-manage'
+  import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
+  import { AccountService } from '@/api/account'
+  import { timestampToTime } from '@/utils/dataprocess/format'
   import UserSearch from './modules/user-search.vue'
   import UserDialog from './modules/user-dialog.vue'
-  import { ElTag, ElMessageBox, ElImage } from 'element-plus'
 
   defineOptions({ name: 'User' })
 
-  type UserListItem = Api.SystemManage.UserListItem
+  type UserListItem = Api.SystemManage.AccountListItem
 
   // 弹窗相关
-  const dialogType = ref<Form.DialogType>('add')
+  const dialogType = ref<'add' | 'edit'>('add')
   const dialogVisible = ref(false)
   const currentUserData = ref<Partial<UserListItem>>({})
 
@@ -64,25 +73,41 @@
 
   // 搜索表单
   const searchForm = ref({
-    userName: undefined,
-    userGender: undefined,
-    userPhone: undefined,
-    userEmail: undefined,
-    status: '1'
+    userName: '',
+    userPhone: '',
+    userEmail: '',
+    status: 0
   })
+
+  // API 请求函数适配器
+  const fetchGetUserList = async (params: any) => {
+    const response = await AccountService.getAccounts({
+      name: params.userName || '',
+      mobile: params.userPhone || '',
+      email: params.userEmail || '',
+      status: params.status || 0,
+      pageNo: params.current,
+      perPage: params.size
+    })
+
+    return {
+      records: response.accounts || [],
+      current: response.pageResult.currentPageNo,
+      size: params.size || 10,
+      total: response.pageResult.totalCount
+    }
+  }
 
   // 用户状态配置
   const USER_STATUS_CONFIG = {
-    '1': { type: 'success' as const, text: '在线' },
-    '2': { type: 'info' as const, text: '离线' },
-    '3': { type: 'warning' as const, text: '异常' },
-    '4': { type: 'danger' as const, text: '注销' }
+    1: { type: 'success' as const, text: '启用' },
+    2: { type: 'danger' as const, text: '禁用' }
   } as const
 
   /**
    * 获取用户状态配置
    */
-  const getUserStatusConfig = (status: string) => {
+  const getUserStatusConfig = (status: number) => {
     return (
       USER_STATUS_CONFIG[status as keyof typeof USER_STATUS_CONFIG] || {
         type: 'info' as const,
@@ -104,19 +129,13 @@
     handleCurrentChange,
     refreshData
   } = useTable({
-    // 核心配置
     core: {
       apiFn: fetchGetUserList,
       apiParams: {
         current: 1,
-        size: 20,
+        size: 10,
         ...searchForm.value
       },
-      // 自定义分页字段映射，未设置时将使用全局配置 tableConfig.ts 中的 paginationKey
-      // paginationKey: {
-      //   current: 'pageNum',
-      //   size: 'pageSize'
-      // },
       columnsFactory: () => [
         { type: 'selection' }, // 勾选列
         { type: 'index', width: 60, label: '序号' }, // 序号
@@ -124,50 +143,94 @@
           prop: 'avatar',
           label: '用户名',
           width: 280,
-          formatter: (row) => {
+          formatter: (row: UserListItem) => {
             return h('div', { class: 'user', style: 'display: flex; align-items: center' }, [
-              h(ElImage, {
+              h('img', {
                 class: 'avatar',
                 src: row.avatar,
-                previewSrcList: [row.avatar],
-                // 图片预览是否插入至 body 元素上，用于解决表格内部图片预览样式异常
-                previewTeleported: true
+                style: 'width: 40px; height: 40px; border-radius: 6px;'
               }),
-              h('div', {}, [
-                h('p', { class: 'user-name' }, row.userName),
-                h('p', { class: 'email' }, row.userEmail)
+              h('div', { style: 'margin-left: 10px' }, [
+                h(
+                  'p',
+                  {
+                    class: 'user-name',
+                    style: 'font-weight: 500; color: var(--art-text-gray-800); margin: 0;'
+                  },
+                  row.nickName + '(' + row.name + ')'
+                ),
+                h(
+                  'p',
+                  {
+                    class: 'email',
+                    style: 'color: var(--art-text-gray-500); margin: 0; font-size: 12px;'
+                  },
+                  row.email
+                )
               ])
             ])
           }
         },
-        {
-          prop: 'userGender',
-          label: '性别',
-          sortable: true,
-          // checked: false, // 隐藏列
-          formatter: (row) => row.userGender
-        },
-        { prop: 'userPhone', label: '手机号' },
+        { prop: 'mobile', label: '手机号' },
         {
           prop: 'status',
           label: '状态',
-          formatter: (row) => {
+          formatter: (row: UserListItem) => {
             const statusConfig = getUserStatusConfig(row.status)
             return h(ElTag, { type: statusConfig.type }, () => statusConfig.text)
           }
         },
         {
+          prop: 'enable',
+          label: '启用状态',
+          formatter: (row: UserListItem) => {
+            return h(ElSwitch, {
+              modelValue: row.status === 1,
+              onClick: () => updateAccountStatus(row.uid, row.status !== 1)
+            })
+          }
+        },
+        {
           prop: 'createTime',
-          label: '创建日期',
+          label: '创建',
+          formatter: (row: UserListItem) => {
+            return h('div', { class: 'user', style: 'display: flex; align-items: center' }, [
+              h('div', {}, [
+                h('p', { style: 'margin: 0;' }, row.creator),
+                h(
+                  'p',
+                  { style: 'margin: 0; color: var(--art-text-gray-500); font-size: 12px;' },
+                  timestampToTime(row.createdAt, false)
+                )
+              ])
+            ])
+          },
+          sortable: true
+        },
+        {
+          prop: 'updateTime',
+          label: '更新',
+          formatter: (row: UserListItem) => {
+            return h('div', { class: 'user', style: 'display: flex; align-items: center' }, [
+              h('div', {}, [
+                h('p', { style: 'margin: 0;' }, row.editor),
+                h(
+                  'p',
+                  { style: 'margin: 0; color: var(--art-text-gray-500); font-size: 12px;' },
+                  timestampToTime(row.updatedAt, false)
+                )
+              ])
+            ])
+          },
           sortable: true
         },
         {
           prop: 'operation',
           label: '操作',
-          width: 120,
+          width: 180,
           fixed: 'right', // 固定列
-          formatter: (row) =>
-            h('div', [
+          formatter: (row: UserListItem) => {
+            return h('div', [
               h(ArtButtonTable, {
                 type: 'edit',
                 onClick: () => showDialog('edit', row)
@@ -177,27 +240,9 @@
                 onClick: () => deleteUser(row)
               })
             ])
+          }
         }
       ]
-    },
-    // 数据处理
-    transform: {
-      // 数据转换器 - 替换头像
-      dataTransformer: (records) => {
-        // 类型守卫检查
-        if (!Array.isArray(records)) {
-          console.warn('数据转换器: 期望数组类型，实际收到:', typeof records)
-          return []
-        }
-
-        // 使用本地头像替换接口返回的头像
-        return records.map((item, index: number) => {
-          return {
-            ...item,
-            avatar: ACCOUNT_TABLE_DATA[index % ACCOUNT_TABLE_DATA.length].avatar
-          }
-        })
-      }
     }
   })
 
@@ -206,7 +251,7 @@
    * @param params 参数
    */
   const handleSearch = (params: Record<string, any>) => {
-    console.log(params)
+    console.log('搜索参数:', params)
     // 搜索参数赋值
     Object.assign(searchParams, params)
     getData()
@@ -215,7 +260,7 @@
   /**
    * 显示用户弹窗
    */
-  const showDialog = (type: Form.DialogType, row?: UserListItem): void => {
+  const showDialog = (type: 'add' | 'edit', row?: UserListItem): void => {
     console.log('打开弹窗:', { type, row })
     dialogType.value = type
     currentUserData.value = row || {}
@@ -229,13 +274,64 @@
    */
   const deleteUser = (row: UserListItem): void => {
     console.log('删除用户:', row)
-    ElMessageBox.confirm(`确定要注销该用户吗？`, '注销用户', {
+    ElMessageBox.confirm(`确定要删除用户"${row.name}"吗？`, '删除用户', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'error'
     }).then(() => {
-      ElMessage.success('注销成功')
+      AccountService.deleteAccount({ uids: [row.uid] })
+        .then(() => {
+          refreshData()
+          ElMessage.success('删除成功')
+        })
+        .catch((error) => {
+          console.error('删除用户失败:', error)
+          ElMessage.error('删除用户失败')
+        })
     })
+  }
+
+  /**
+   * 批量删除用户
+   */
+  const batchDeleteUsers = (): void => {
+    if (selectedRows.value.length === 0) {
+      ElMessage.warning('请选择要删除的用户')
+      return
+    }
+
+    ElMessageBox.confirm(`确定要删除选中的${selectedRows.value.length}个用户吗？`, '批量删除用户', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'error'
+    }).then(() => {
+      const userIds = selectedRows.value.map((user) => user.uid)
+      AccountService.deleteAccount({ uids: userIds })
+        .then(() => {
+          refreshData()
+          selectedRows.value = []
+          ElMessage.success('批量删除成功')
+        })
+        .catch((error) => {
+          console.error('批量删除用户失败:', error)
+          ElMessage.error('批量删除用户失败')
+        })
+    })
+  }
+
+  /**
+   * 更新账户状态
+   */
+  const updateAccountStatus = (userId: string, toEnable: boolean): void => {
+    AccountService.modifyAccountStatus({ uid: userId, toEnable })
+      .then(() => {
+        refreshData()
+        ElMessage.success(toEnable ? '启用成功' : '禁用成功')
+      })
+      .catch((error) => {
+        console.error('更新账户状态失败:', error)
+        ElMessage.error('更新账户状态失败')
+      })
   }
 
   /**
@@ -245,8 +341,11 @@
     try {
       dialogVisible.value = false
       currentUserData.value = {}
+      refreshData()
+      ElMessage.success(dialogType.value === 'add' ? '创建用户成功' : '修改用户成功')
     } catch (error) {
       console.error('提交失败:', error)
+      ElMessage.error('提交失败')
     }
   }
 
@@ -265,7 +364,6 @@
       .avatar {
         width: 40px;
         height: 40px;
-        margin-left: 0;
         border-radius: 6px;
       }
 
@@ -275,6 +373,11 @@
         .user-name {
           font-weight: 500;
           color: var(--art-text-gray-800);
+        }
+
+        .email {
+          color: var(--art-text-gray-500);
+          font-size: 12px;
         }
       }
     }

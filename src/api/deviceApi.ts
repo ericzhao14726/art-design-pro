@@ -1,4 +1,5 @@
 import request from '@/utils/http'
+import { useUserStore } from '@/store/modules/user'
 
 export class DeviceService {
   // 登录
@@ -7,21 +8,6 @@ export class DeviceService {
       url: '/api/auth/login',
       params
       // showErrorMessage: false // 不显示错误消息
-    })
-  }
-
-  // 获取用户信息
-  static getUserInfo() {
-    return request.get<Api.User.UserInfo>({
-      url: '/api/user/info'
-    })
-  }
-
-  // 获取用户列表
-  static getUserList(params: Api.Common.PaginatingParams) {
-    return request.get<Api.User.UserListData>({
-      url: '/api/user/list',
-      params
     })
   }
 
@@ -158,5 +144,15 @@ export class DeviceService {
       url: '/api/device-manager/createWebTerminal',
       params: { deviceId }
     })
+  }
+
+  // WebSocket终端连接
+  static createWebSocketTerminal() {
+    const { VITE_API_PROXY_URL } = import.meta.env
+    const baseUrl = VITE_API_PROXY_URL.replace(/^http/, 'ws')
+    // 构建WebSocket URL，自动携带token
+    const { accessToken } = useUserStore()
+    const wsUrl = `${baseUrl}device-manager/createWebTerminal/${accessToken}`
+    return new WebSocket(wsUrl)
   }
 }

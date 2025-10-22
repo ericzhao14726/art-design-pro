@@ -52,7 +52,11 @@
         </el-tab-pane>
         <el-tab-pane label="功能数据" name="funcModelData">功能数据</el-tab-pane>
         <el-tab-pane label="终端" name="webTerm" :lazy="true">
-          <WebTerm />
+          <WebTerm
+            v-if="deviceDetail.deviceId != ''"
+            :product-id="deviceDetail.productId"
+            :device-id="deviceDetail.deviceId"
+          />
         </el-tab-pane>
       </el-tabs>
     </ElCard>

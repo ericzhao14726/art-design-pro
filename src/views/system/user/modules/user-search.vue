@@ -42,10 +42,8 @@
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve([
-          { label: '在线', value: '1' },
-          { label: '离线', value: '2' },
-          { label: '异常', value: '3' },
-          { label: '注销', value: '4' }
+          { label: '启用', value: '1' },
+          { label: '禁用', value: '2' }
         ])
       }, 1000)
     })
@@ -83,17 +81,6 @@
       props: {
         placeholder: '请选择状态',
         options: statusOptions.value
-      }
-    },
-    {
-      label: '性别',
-      key: 'userGender',
-      type: 'radiogroup',
-      props: {
-        options: [
-          { label: '男', value: '1' },
-          { label: '女', value: '2' }
-        ]
       }
     }
   ])

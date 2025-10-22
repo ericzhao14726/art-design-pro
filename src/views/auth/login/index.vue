@@ -20,18 +20,6 @@
             @keyup.enter="handleSubmit"
             style="margin-top: 25px"
           >
-            <ElFormItem prop="account">
-              <ElSelect v-model="formData.account" @change="setupAccount" class="account-select">
-                <ElOption
-                  v-for="account in accounts"
-                  :key="account.key"
-                  :label="account.label"
-                  :value="account.key"
-                >
-                  <span>{{ account.label }}</span>
-                </ElOption>
-              </ElSelect>
-            </ElFormItem>
             <ElFormItem prop="username">
               <ElInput
                 :placeholder="$t('login.placeholder.username')"
@@ -66,13 +54,13 @@
               }}</p>
             </div>
 
-            <div class="forget-password">
+            <!-- <div class="forget-password">
               <ElCheckbox v-model="formData.rememberPassword">{{
                 $t('login.rememberPwd')
               }}</ElCheckbox>
               <RouterLink :to="{ name: 'ForgetPassword' }">{{ $t('login.forgetPwd') }}</RouterLink>
             </div>
-
+-->
             <div style="margin-top: 30px">
               <ElButton
                 class="login-btn"
@@ -85,12 +73,12 @@
               </ElButton>
             </div>
 
-            <div class="footer">
+            <!-- <div class="footer">
               <p>
                 {{ $t('login.noAccount') }}
                 <RouterLink :to="{ name: 'Register' }">{{ $t('login.register') }}</RouterLink>
               </p>
-            </div>
+            </div> -->
           </ElForm>
         </div>
       </div>
@@ -124,32 +112,7 @@
     label: string
     userName: string
     password: string
-    roles: string[]
   }
-
-  const accounts = computed<Account[]>(() => [
-    {
-      key: 'super',
-      label: t('login.roles.super'),
-      userName: 'Super',
-      password: '123456',
-      roles: ['R_SUPER']
-    },
-    {
-      key: 'admin',
-      label: t('login.roles.admin'),
-      userName: 'Admin',
-      password: '123456',
-      roles: ['R_ADMIN']
-    },
-    {
-      key: 'user',
-      label: t('login.roles.user'),
-      userName: 'User',
-      password: '123456',
-      roles: ['R_USER']
-    }
-  ])
 
   const dragVerify = ref()
 
@@ -174,18 +137,6 @@
   }))
 
   const loading = ref(false)
-
-  onMounted(() => {
-    setupAccount('super')
-  })
-
-  // 设置账号
-  const setupAccount = (key: AccountKey) => {
-    const selectedAccount = accounts.value.find((account: Account) => account.key === key)
-    formData.account = key
-    formData.username = selectedAccount?.userName ?? ''
-    formData.password = selectedAccount?.password ?? ''
-  }
 
   // 登录
   const handleSubmit = async () => {
